@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 class AstroService {
@@ -8,6 +7,8 @@ class AstroService {
   static const String _baseUrl = 'https://api.xmltime.com/astronomy';
 
   /// Fetches astrological data for a given location, date range, and astronomical object.
+  /// This method uses the user/password in the URL for authentication.
+  ///
   /// - [placeid]: Location identifier.
   /// - [startDate]: Start date for the data range in YYYY-MM-DD format.
   /// - [endDate]: End date for the data range in YYYY-MM-DD format.
@@ -15,7 +16,7 @@ class AstroService {
   ///
   /// Returns:
   /// - A [Future<String>] containing the response body as a JSON string.
-  /// 
+  ///
   /// Throws:
   /// - Exception if the HTTP request fails or the API returns an error.
   static Future<String> fetchAstroData({
@@ -25,65 +26,28 @@ class AstroService {
     required String object,
   }) async {
     try {
-      // Step 1: Generate current timestamp and expiration timestamp in ISO 8601 format
-      final DateTime today = DateTime.now();
-      final DateTime timestamp = DateTime(
-        today.year,
-        today.month,
-        today.day,
-      ).toUtc();
-
-      final String timestampFormatted = timestamp
-          .toIso8601String()
-          .replaceAll('.000', '');
-
-      print('Generated ISO 8601 timestamp: $timestampFormatted'); 
-      // Example: 2024-12-23T00:00:00Z
-
-      const String timeservice = "timeservice";
-
-      // Step 2: Generate the raw string for HMAC calculation
-      final String rawString = '$_apiKey$timeservice$timestampFormatted'; // Access Key + Service Name + Timestamp
-      print('String for HMAC Calculation: $rawString');
-
-      // DEFINITELY CORRECT UP TO HERE, NEED TO FIGURE OUT THE REST
-      // https://dev.timeanddate.com/docs/authentication#signature
-
-      // Step 3: Generate HMAC using SHA-1
-      final Hmac hmac = Hmac(sha1, utf8.encode(_secretKey)); // Secret Key
-      final List<int> hmacBytes = hmac.convert(utf8.encode(rawString)).bytes;
-
-      // Step 4: Base64 encode the binary HMAC output
-      final String signature = base64.encode(hmacBytes);
-      print('Generated Signature (Base64): $signature');
-
-      // Step 5: Build the request body
-      final Map<String, dynamic> requestBody = {
-        'accesskey': _apiKey,
-        'timestamp': timestampFormatted,
-        'version': '3',
-        'placeid': placeid,
-        'startdt': startDate,
-        'enddt': endDate,
-        'object': object, // Astronomical object
-        'signature': signature, // HMAC signature for authentication
-      };
-
-      print('Final Request Body: $requestBody');
-
-      // Step 6: Send POST request
-      final http.Client client = http.Client();
-      final http.Response response = await client.post(
-        Uri.parse(_baseUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(requestBody),
+      // Build the request URL with `accesskey` and `secretkey`
+      final Uri requestUrl = Uri.parse(
+        '$_baseUrl'
+        '?accesskey=${Uri.encodeComponent(_apiKey)}'
+        '&secretkey=${Uri.encodeComponent(_secretKey)}'
+        '&placeid=${Uri.encodeComponent(placeid)}'
+        '&startdt=${Uri.encodeComponent(startDate)}'
+        '&enddt=${Uri.encodeComponent(endDate)}'
+        '&object=${Uri.encodeComponent(object)}'
+        '&version=3',
       );
+
+      print('Request URL: $requestUrl');
+
+      // Send the GET request
+      final http.Response response = await http.get(requestUrl);
 
       // Log response details
       print('Response Status Code: ${response.statusCode}');
       print('Response Body: ${response.body}');
 
-      // Step 6: Handle response
+      // Handle response
       if (response.statusCode == 200) {
         return response.body;
       } else {
