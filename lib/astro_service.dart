@@ -3,66 +3,111 @@ import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 
 class AstroService {
-  static const String _apiKey = 'O32VzHDSac'; // Replace with your actual API key
-  static const String _secretKey = 'toH48Np5SKGBRZ6mUOoi'; // Replace with your actual secret key
-  static const String _baseUrl = 'https://api.xmltime.com/astrodata';
+  static const String _apiKey = 'OSZmK3YwxE'; // Replace with your actual API key
+  static const String _secretKey = 'Mky2rX9eR2TbbHs8ZBdQ'; // Replace with your actual secret key
+  static const String _baseUrl = 'https://api.xmltime.com/astronomy';
 
+  /// Fetches astrological data for a given location, date range, and astronomical object.
+  /// - [placeid]: Location identifier.
+  /// - [startDate]: Start date for the data range in YYYY-MM-DD format.
+  /// - [endDate]: End date for the data range in YYYY-MM-DD format.
+  /// - [object]: Astronomical object (e.g., "sun", "moon").
+  ///
+  /// Returns:
+  /// - A [Future<String>] containing the response body as a JSON string.
+  /// 
+  /// Throws:
+  /// - Exception if the HTTP request fails or the API returns an error.
   static Future<String> fetchAstroData({
     required String placeid,
     required String startDate,
     required String endDate,
+    required String object,
   }) async {
     try {
-      // Step 1: Generate ISO 8601 timestamp in UTC
-      final timestamp = DateTime.now().toUtc().toIso8601String().split('.')[0] + 'Z';
-      print('Generated ISO 8601 timestamp: $timestamp');
+      // Step 1: Generate current timestamp and expiration timestamp in ISO 8601 format
+      final DateTime today = DateTime.now();
+      final DateTime timestamp = DateTime(
+        today.year,
+        today.month,
+        today.day,
+      ).toUtc();
 
-      // Step 2: Build the HMAC string
-      final serviceName = 'astrodata';
-      final hmacString = '$_apiKey$serviceName$timestamp';
-      print('String for HMAC Calculation: $hmacString');
+      final String timestampFormatted = timestamp
+          .toIso8601String()
+          .replaceAll('.000', '');
 
-      // Step 3: Generate HMAC-SHA1 signature
-      final hmac = Hmac(sha1, utf8.encode(_secretKey));
-      final digest = hmac.convert(utf8.encode(hmacString));
-      final signature = base64.encode(digest.bytes);
+      print('Generated ISO 8601 timestamp: $timestampFormatted'); 
+      // Example: 2024-12-23T00:00:00Z
+
+      const String timeservice = "timeservice";
+
+      // Step 2: Generate the raw string for HMAC calculation
+      final String rawString = '$_apiKey$timeservice$timestampFormatted'; // Access Key + Service Name + Timestamp
+      print('String for HMAC Calculation: $rawString');
+
+      // DEFINITELY CORRECT UP TO HERE, NEED TO FIGURE OUT THE REST
+      // https://dev.timeanddate.com/docs/authentication#signature
+
+      // Step 3: Generate HMAC using SHA-1
+      final Hmac hmac = Hmac(sha1, utf8.encode(_secretKey)); // Secret Key
+      final List<int> hmacBytes = hmac.convert(utf8.encode(rawString)).bytes;
+
+      // Step 4: Base64 encode the binary HMAC output
+      final String signature = base64.encode(hmacBytes);
       print('Generated Signature (Base64): $signature');
 
-      // Step 4: Construct the request body (includes both query parameters and operation parameters)
-      final requestBody = {
+      // Step 5: Build the request body
+      final Map<String, dynamic> requestBody = {
         'accesskey': _apiKey,
-        'timestamp': timestamp,
+        'timestamp': timestampFormatted,
         'version': '3',
-        'signature': signature,
         'placeid': placeid,
         'startdt': startDate,
         'enddt': endDate,
+        'object': object, // Astronomical object
+        'signature': signature, // HMAC signature for authentication
       };
 
-      // Log the full request body
-      print('Final Request Body: ${jsonEncode(requestBody)}');
+      print('Final Request Body: $requestBody');
 
-      // Step 5: Construct the URL (with no query string this time)
-      final url = Uri.parse(_baseUrl);
-      print('Final Request URL: $url');
+      // Step 6: Send POST request
+      final http.Client client = http.Client();
+      final http.Response response = await client.post(
+        Uri.parse(_baseUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
 
-      // Step 6: Send the HTTP POST request
-      final client = http.Client();
-      try {
-        final response = await client.post(
-          url,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(requestBody),
-        );
-        print('Response Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
+      // Log response details
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+
+      // Step 6: Handle response
+      if (response.statusCode == 200) {
         return response.body;
-      } finally {
-        client.close();
+      } else {
+        throw Exception(
+            'HTTP Error: Status Code ${response.statusCode}\nResponse: ${response.body}');
       }
     } catch (e) {
       print('Error during HTTP Request: $e');
       return '{"version":3,"errors":["$e"]}'; // Return a JSON-like error message
     }
+  }
+}
+
+void main() async {
+  try {
+    final result = await AstroService.fetchAstroData(
+      placeid: 'norway/oslo', // Example place ID
+      startDate: '2024-11-23', // Start date
+      endDate: '2024-12-23', // End date
+      object: 'sun', // Example object
+    );
+
+    print('API Response: $result');
+  } catch (e) {
+    print('Error: $e');
   }
 }
