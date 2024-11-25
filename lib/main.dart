@@ -76,6 +76,8 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   /// Updates the UI with the response or an error message.
   Future<void> _fetchData() async {
     try {
+      final nowTimestamp = DateTime.now().toIso8601String(); // Generate current timestamp
+
       final data = await AstroService.fetchAstroData(
         placeid: 'norway/oslo', // Replace with a valid placeid
         startDate: DateTime.now().toIso8601String().split('T').first, // Current date
@@ -84,7 +86,8 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
             .toIso8601String()
             .split('T')
             .first, // Next day
-        object: 'sun', // Specify the astronomical object (e.g., "sun", "moon")
+        object: 'moon', // Specify the astronomical object (e.g., "sun", "moon")
+        interval: nowTimestamp, // Use the current timestamp as the interval
       );
 
       setState(() {

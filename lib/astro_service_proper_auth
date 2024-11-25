@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 class AstroService {
   static const String _apiKey = 'OSZmK3YwxE'; // Replace with your actual API key
   static const String _secretKey = 'Mky2rX9eR2TbbHs8ZBdQ'; // Replace with your actual secret key
-  static const String _baseUrl = 'https://api.xmltime.com/astronomy';
+  static const String _baseUrl = 'https://api.xmltime.com/astro';
 
   /// Fetches astrological data for a given location, date range, and astronomical object.
   /// - [placeid]: Location identifier.

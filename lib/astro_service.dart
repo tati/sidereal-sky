@@ -4,15 +4,16 @@ import 'package:http/http.dart' as http;
 class AstroService {
   static const String _apiKey = 'OSZmK3YwxE'; // Replace with your actual API key
   static const String _secretKey = 'Mky2rX9eR2TbbHs8ZBdQ'; // Replace with your actual secret key
-  static const String _baseUrl = 'https://api.xmltime.com/astronomy';
+  static const String _baseUrl = 'https://api.xmltime.com/astrodata';
 
-  /// Fetches astrological data for a given location, date range, and astronomical object.
+  /// Fetches astrological data for a given location, date range, astronomical object, and interval.
   /// This method uses the user/password in the URL for authentication.
   ///
   /// - [placeid]: Location identifier.
   /// - [startDate]: Start date for the data range in YYYY-MM-DD format.
   /// - [endDate]: End date for the data range in YYYY-MM-DD format.
   /// - [object]: Astronomical object (e.g., "sun", "moon").
+  /// - [interval]: Data interval (e.g., "hourly", "daily").
   ///
   /// Returns:
   /// - A [Future<String>] containing the response body as a JSON string.
@@ -24,6 +25,7 @@ class AstroService {
     required String startDate,
     required String endDate,
     required String object,
+    required String interval,
   }) async {
     try {
       // Build the request URL with `accesskey` and `secretkey`
@@ -35,6 +37,7 @@ class AstroService {
         '&startdt=${Uri.encodeComponent(startDate)}'
         '&enddt=${Uri.encodeComponent(endDate)}'
         '&object=${Uri.encodeComponent(object)}'
+        '&interval=${Uri.encodeComponent(interval)}'
         '&version=3',
       );
 
@@ -67,7 +70,8 @@ void main() async {
       placeid: 'norway/oslo', // Example place ID
       startDate: '2024-11-23', // Start date
       endDate: '2024-12-23', // End date
-      object: 'sun', // Example object
+      object: 'moon', // Example object
+      interval: 'daily', // Example interval
     );
 
     print('API Response: $result');
