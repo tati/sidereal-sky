@@ -25,6 +25,9 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
           .split('T')
           .first;
 
+      print(startDate);
+      print(endDate);
+
       final String apiResponse = await AstroService.fetchAstroData(
         startDate: startDate,
         endDate: endDate,
@@ -42,7 +45,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
       const double ayanamsa = 23.856;
       final double adjustedLongitude = adjustToTropical(moonLongitude, ayanamsa);
-      final String astrologySign = etAstrologygSign(adjustedLongitude);
+      final String astrologySign = getAstrologySign(adjustedLongitude);
 
       setState(() {
         _response = '''

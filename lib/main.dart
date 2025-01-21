@@ -11,10 +11,11 @@ class AstroDataApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Astro Data Viewer',
+      title: 'Moon Beam',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-      ),
+        scaffoldBackgroundColor: Colors.deepPurple,
+      ), 
       home: const AstroDataScreen(),
     );
   }
