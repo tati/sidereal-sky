@@ -14,6 +14,7 @@ class AstroDataScreen extends StatefulWidget {
 class _AstroDataScreenState extends State<AstroDataScreen> {
   String _response = "Loading Astro data...";
   String _moonPhaseHtml = "";
+  String _currentMoonPhase = ""; // Store the current moon phase
 
   Future<void> _fetchData() async {
     try {
@@ -41,7 +42,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
       const double ayanamsa = 23.856;
       final double adjustedLongitude = adjustToTropical(moonLongitude, ayanamsa);
-      final String astrologySign = getAstrologySign(adjustedLongitude);
+      final String astrologySign = etAstrologygSign(adjustedLongitude);
 
       setState(() {
         _response = '''
@@ -53,6 +54,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
         ''';
 
         _moonPhaseHtml = generateMoonPhaseHtml(moonPhase);
+        _currentMoonPhase = moonPhase; // Update the current moon phase
       });
     } catch (e) {
       setState(() {
@@ -86,7 +88,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
             const SizedBox(height: 20),
             Html(data: _moonPhaseHtml),
             const SizedBox(height: 20),
-            MoonPhaseWidget(moonPhase: 'new moon'), // Replace with dynamic value
+            MoonPhaseWidget(moonPhase: _currentMoonPhase), // Dynamic moon phase
           ],
         ),
       ),

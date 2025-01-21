@@ -11,6 +11,10 @@ class MoonPhaseWidget extends StatelessWidget {
         return 'assets/images/new_moon.png';
       case 'full moon':
         return 'assets/images/full_moon.png';
+      case 'first quarter':
+        return 'assets/images/first_quarter.png';
+      case 'last quarter':
+        return 'assets/images/last_quarter.png';
       default:
         return 'assets/images/default_moon.png';
     }
