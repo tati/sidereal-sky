@@ -16,7 +16,7 @@ dependencies:
   win32: ^5.4.0
   chewie: ^1.5.0 # Downgraded to avoid conflict
   cupertino_icons: ^1.0.8
-  http: ^1.2.2
+  http: ^1.3.0
 
 dev_dependencies:
   flutter_test:
