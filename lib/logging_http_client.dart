@@ -15,7 +15,7 @@ class LoggingHttpClient extends http.BaseClient {
       log('Body: ${request.body}');
     }
 
-    print('Attempting HTTP GET request...');
+    log('Attempting HTTP GET request...');
     final response = await _inner.send(request);
 
     // Log the response details

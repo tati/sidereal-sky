@@ -3,6 +3,7 @@ import 'package:flutter_html/flutter_html.dart';
 import '../services/astro_service.dart';
 import '../utils/astro_utils.dart';
 import '../widgets/moon_phase_widget.dart';
+import 'dart:developer';
 
 class AstroDataScreen extends StatefulWidget {
   const AstroDataScreen({super.key});
@@ -25,8 +26,8 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
           .split('T')
           .first;
 
-      print(startDate);
-      print(endDate);
+      log(startDate);
+      log(endDate);
 
       final String apiResponse = await AstroService.fetchAstroData(
         startDate: startDate,
@@ -63,7 +64,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
       setState(() {
         _response = "Error: $e";
       });
-      print('Error during Fetch: $e');
+      log('Error during Fetch: $e');
     }
   }
 

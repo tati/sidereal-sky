@@ -8,7 +8,7 @@ class MoonPhaseWidget extends StatelessWidget {
   String getMoonPhaseImage(String moonPhase) {
     switch (moonPhase.toLowerCase()) {
       case 'new moon':
-        return 'assets/images/new_moon.png';
+        return 'assets/images/full_moon.png';
       case 'full moon':
         return 'assets/images/full_moon.png';
       case 'first quarter':

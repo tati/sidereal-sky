@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:developer';
 
 class AstroService {
   static const String _baseUrl = 'https://ssd.jpl.nasa.gov/api/horizons.api';
@@ -23,10 +24,13 @@ class AstroService {
         '&QUANTITIES=2', // Positional data
       );
 
-      print('Request URL: $requestUrl');
+      log('Request URL: $requestUrl');
+      log('response');
 
       // Send the GET request
       final http.Response response = await http.get(requestUrl);
+      log('response test');
+      log('response.statusCode $response.statusCode');
 
       // Handle response
       if (response.statusCode == 200) {
@@ -36,7 +40,7 @@ class AstroService {
             'HTTP Error: Status Code ${response.statusCode}\nResponse: ${response.body}');
       }
     } catch (e) {
-      print('Error during HTTP Request: $e');
+      log('Error during HTTP Request: $e');
       return '{"error":"$e"}';
     }
   }
@@ -49,19 +53,21 @@ class AstroService {
       final String result = jsonResponse['result'];
 
       // Debug: Print the raw result string
-      print('Raw API Result: $result');
+      log('Raw API Result: $result');
 
       // Parse celestial longitudes for Moon and Sun
       final RegExp longitudeRegex = RegExp(
           r'\d{4}-\w{3}-\d{2}\s+\d{2}:\d{2}\s+([\d.]+)\s+[\d.]+');
       final List<Match> matches = longitudeRegex.allMatches(result).toList();
 
+      log('Matches $matches');
+
       if (matches.isEmpty) {
         throw Exception('No celestial longitudes found in the response');
       }
 
       // Extract Moon and Sun longitudes safely
-      final double? moonLongitude = matches.isNotEmpty && matches.length > 0
+      final double? moonLongitude = matches.isNotEmpty
           ? double.tryParse(matches[0].group(1) ?? '')
           : null;
       final double? sunLongitude = matches.isNotEmpty && matches.length > 1
@@ -83,7 +89,7 @@ class AstroService {
         'moonPhase': moonPhase,
       };
     } catch (e) {
-      print('Error parsing astro data: $e');
+      log('Error parsing astro data: $e');
       return {};
     }
   }
