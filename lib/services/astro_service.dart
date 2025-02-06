@@ -96,11 +96,19 @@ class AstroService {
 
   /// Determines the Moon Phase based on the elongation angle.
   static String _calculateMoonPhase(double elongation) {
+    log('elongation: $elongation');
     if (elongation < 0) elongation += 360; // Ensure positive elongation
-    if (elongation < 45 || elongation > 315) return "New Moon";
-    if (elongation >= 45 && elongation < 135) return "First Quarter";
-    if (elongation >= 135 && elongation < 225) return "Full Moon";
-    if (elongation >= 225 && elongation <= 315) return "Last Quarter";
+
+    if (elongation >= 0 && elongation < 22.5) return "New Moon";
+    if (elongation >= 22.5 && elongation < 67.5) return "Waxing Crescent";
+    if (elongation >= 67.5 && elongation < 112.5) return "First Quarter";
+    if (elongation >= 112.5 && elongation < 157.5) return "Waxing Gibbous";
+    if (elongation >= 157.5 && elongation < 202.5) return "Full Moon";
+    if (elongation >= 202.5 && elongation < 247.5) return "Waning Gibbous";
+    if (elongation >= 247.5 && elongation < 292.5) return "Last Quarter";
+    if (elongation >= 292.5 && elongation < 337.5) return "Waning Crescent";
+    
     return "Unknown Moon Phase";
   }
+
 }
