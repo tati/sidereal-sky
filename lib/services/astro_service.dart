@@ -1,6 +1,12 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:developer';
+/*
+astro_service.dart
+
+This is the call made to the NASA API.
+Documentation can be found at https://ssd-api.jpl.nasa.gov/doc/horizons.html
+*/
 
 class AstroService {
   static const String _baseUrl = 'https://ssd.jpl.nasa.gov/api/horizons.api';
@@ -9,7 +15,7 @@ class AstroService {
   static Future<String> fetchAstroData({
     required String startDate,
     required String endDate,
-    String stepSize = '1d',
+    String stepSize = '1h',
   }) async {
     try {
       // Build the request URL with geocentric coordinates for Moon and Sun
