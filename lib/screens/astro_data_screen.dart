@@ -78,21 +78,29 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Astro Data Viewer'),
+        title: const Text(
+          'Oracle of Delphi',
+        style: TextStyle(
+          fontFamily: 'EBGaramond', // Replace with the actual font family defined in your pubspec.yaml
+        ),
+        ),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(
-              _response,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 16),
+            const SizedBox(height: 50),
+            SizedBox(
+              width: 200,
+              child: MoonPhaseWidget(moonPhase: _currentMoonPhase), // Dynamic moon phase,
             ),
             const SizedBox(height: 20),
             Html(data: _moonPhaseHtml),
-            const SizedBox(height: 20),
-            MoonPhaseWidget(moonPhase: _currentMoonPhase), // Dynamic moon phase
+            Text(
+              _response,
+              textAlign: TextAlign.left,
+              style: const TextStyle(fontSize: 16, color: Colors.white),
+            ),
           ],
         ),
       ),

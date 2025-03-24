@@ -27,4 +27,9 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+  fonts:
+    - family: EBGaramond
+      fonts:
+        - asset: assets/images/EBGaramond-VariableFont_wght.ttf
+
 

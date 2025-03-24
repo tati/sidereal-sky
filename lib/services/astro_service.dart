@@ -53,6 +53,8 @@ class AstroService {
 
   /// Parses the celestial longitude and Moon Phase from the Horizons API response.
   static Map<String, dynamic> parseAstroData(String response) {
+    log('API Response: $response');
+   
     try {
       // Extract the "result" field from the JSON response
       final Map<String, dynamic> jsonResponse = jsonDecode(response);
