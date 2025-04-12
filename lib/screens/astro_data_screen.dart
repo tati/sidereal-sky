@@ -77,24 +77,14 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Oracle of Delphi',
-        style: TextStyle(
-          fontFamily: 'EBGaramond', // Replace with the actual font family defined in your pubspec.yaml
-        ),
-        ),
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 50),
             SizedBox(
-              width: 200,
+              width: 140,
               child: MoonPhaseWidget(moonPhase: _currentMoonPhase), // Dynamic moon phase,
             ),
-            const SizedBox(height: 20),
             Html(data: _moonPhaseHtml),
             Text(
               _response,

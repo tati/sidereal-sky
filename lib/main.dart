@@ -41,14 +41,6 @@ class AstroDataScreenWithOverlay extends StatelessWidget {
             ),
           ),
           // Positioned widget to place your logo at the bottom right
-          Positioned(
-            bottom: 16, // adjust margin as needed
-            right: 16,  // adjust margin as needed
-            child: Image.asset(
-              'assets/images/logo_transparent.png',
-              width: 100, // adjust the size as needed
-            ),
-          ),
         ],
       ),
     );
