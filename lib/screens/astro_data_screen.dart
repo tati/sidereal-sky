@@ -4,6 +4,7 @@ import '../services/astro_service.dart';
 import '../utils/astro_utils.dart';
 import '../widgets/moon_phase_widget.dart';
 import 'dart:developer';
+import '../services/models/ephemeris_data.dart';
 
 class AstroDataScreen extends StatefulWidget {
   const AstroDataScreen({super.key});
@@ -15,7 +16,7 @@ class AstroDataScreen extends StatefulWidget {
 class _AstroDataScreenState extends State<AstroDataScreen> {
   String _response = "Loading Astro data...";
   String _moonPhaseHtml = "";
-  String _currentMoonPhase = ""; // Store the current moon phase
+  String _currentMoonPhase = "";
 
   Future<void> _fetchData() async {
     try {
@@ -33,32 +34,38 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
         startDate: startDate,
         endDate: endDate,
       );
+      log("Astro data has been fetched");
+      log(apiResponse);
 
-      final Map<String, dynamic> astroData = AstroService.parseAstroData(apiResponse);
+      final List<EphemerisData> astroData = AstroService.parseAstroData(apiResponse);
 
-      if (astroData.isEmpty) {
-        throw Exception("Failed to parse astro data");
+      if (astroData.length < 2) {
+        throw Exception("Not enough data points to compute Moon and Sun positions.");
       }
 
-      final double moonLongitude = astroData['moonLongitude'];
-      final double sunLongitude = astroData['sunLongitude'];
-      final String moonPhase = astroData['moonPhase'];
+      // Assuming the first two entries are Moon and Sun in order
+      final moonLongitude = astroData[0].longitude;
+      final sunLongitude = astroData[1].longitude;
 
+      // Calculate elongation and moon phase
+      final double elongation = (moonLongitude - sunLongitude) % 360;
+      final String moonPhase = AstroService.calculateMoonPhase(elongation);
+
+      // Astrology adjustment
       const double ayanamsa = 23.856;
       final double adjustedLongitude = adjustToTropical(moonLongitude, ayanamsa);
       final String astrologySign = getAstrologySign(adjustedLongitude);
 
       setState(() {
         _response = '''
-          Moon Phase: $moonPhase
-          Moon Longitude: $moonLongitude°
-          Sun Longitude: $sunLongitude°
-          Adjusted Longitude (Tropical): $adjustedLongitude°
-          Astrology Sign: $astrologySign
-        ''';
-
+Moon Phase: $moonPhase
+Moon Longitude: $moonLongitude°
+Sun Longitude: $sunLongitude°
+Adjusted Longitude (Tropical): $adjustedLongitude°
+Astrology Sign: $astrologySign
+''';
         _moonPhaseHtml = generateMoonPhaseHtml(moonPhase);
-        _currentMoonPhase = moonPhase; // Update the current moon phase
+        _currentMoonPhase = moonPhase;
       });
     } catch (e) {
       setState(() {
@@ -77,13 +84,14 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             SizedBox(
               width: 140,
-              child: MoonPhaseWidget(moonPhase: _currentMoonPhase), // Dynamic moon phase,
+              child: MoonPhaseWidget(moonPhase: _currentMoonPhase),
             ),
             Html(data: _moonPhaseHtml),
             Text(

@@ -1,122 +1,109 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:developer';
-/*
-astro_service.dart
-
-This is the call made to the NASA API.
-Documentation can be found at https://ssd-api.jpl.nasa.gov/doc/horizons.html
-*/
+import 'package:http/http.dart' as http;
+import 'models/ephemeris_data.dart';
 
 class AstroService {
   static const String _baseUrl = 'https://ssd.jpl.nasa.gov/api/horizons.api';
 
-  /// Fetches celestial longitude and related data for the Moon and Sun from NASA Horizons API.
   static Future<String> fetchAstroData({
     required String startDate,
     required String endDate,
     String stepSize = '1h',
   }) async {
     try {
-      // Build the request URL with geocentric coordinates for Moon and Sun
       final Uri requestUrl = Uri.parse(
         '$_baseUrl?format=json'
-        '&COMMAND="301,10"' // Query both Moon (301) and Sun (10)
+        '&COMMAND="301,10"' // Moon (301) and Sun (10)
         '&EPHEM_TYPE=OBSERVER'
-        '&CENTER=500@399' // Geocentric perspective
+        '&CENTER=500@399'
         '&START_TIME=${Uri.encodeComponent(startDate)}'
         '&STOP_TIME=${Uri.encodeComponent(endDate)}'
         '&STEP_SIZE=${Uri.encodeComponent(stepSize)}'
-        '&QUANTITIES=2', // Positional data
+        '&QUANTITIES=2',
       );
 
       log('Request URL: $requestUrl');
-      log('response');
-
-      // Send the GET request
       final http.Response response = await http.get(requestUrl);
-      log('response test');
-      log('response.statusCode $response.statusCode');
+      log('response.statusCode: ${response.statusCode}');
+      log('Raw Response: ${response.body}');
 
-      // Handle response
       if (response.statusCode == 200) {
         return response.body;
       } else {
-        throw Exception(
-            'HTTP Error: Status Code ${response.statusCode}\nResponse: ${response.body}');
+        throw Exception('HTTP Error: ${response.statusCode}');
       }
     } catch (e) {
-      log('Error during HTTP Request: $e');
+      log('HTTP Request Error: $e');
       return '{"error":"$e"}';
     }
   }
 
-  /// Parses the celestial longitude and Moon Phase from the Horizons API response.
-  static Map<String, dynamic> parseAstroData(String response) {
-    log('API Response: $response');
-   
+  static String calculateMoonPhase(double elongation) {
+  if (elongation < 0) elongation += 360;
+  elongation = elongation % 360;
+
+  if (elongation < 22.5 || elongation >= 337.5) return "New Moon";
+  if (elongation >= 22.5 && elongation < 67.5) return "Waxing Crescent";
+  if (elongation >= 67.5 && elongation < 112.5) return "First Quarter";
+  if (elongation >= 112.5 && elongation < 157.5) return "Waxing Gibbous";
+  if (elongation >= 157.5 && elongation < 202.5) return "Full Moon";
+  if (elongation >= 202.5 && elongation < 247.5) return "Waning Gibbous";
+  if (elongation >= 247.5 && elongation < 292.5) return "Last Quarter";
+  if (elongation >= 292.5 && elongation < 337.5) return "Waning Crescent";
+
+  return "Unknown Phase";
+}
+
+  static List<EphemerisData> parseAstroData(String response) {
     try {
-      // Extract the "result" field from the JSON response
       final Map<String, dynamic> jsonResponse = jsonDecode(response);
       final String result = jsonResponse['result'];
+      final List<String> lines = LineSplitter.split(result).toList();
 
-      // Debug: Print the raw result string
-      log('Raw API Result: $result');
+      final int startIndex = lines.indexWhere((line) => line.contains(r'$$SOE')) + 1;
+      final int endIndex = lines.indexWhere((line) => line.contains(r'$$EOE'));
+      final List<String> dataLines = lines.sublist(startIndex, endIndex);
 
-      // Parse celestial longitudes for Moon and Sun
-      final RegExp longitudeRegex = RegExp(
-          r'\d{4}-\w{3}-\d{2}\s+\d{2}:\d{2}\s+([\d.]+)\s+[\d.]+');
-      final List<Match> matches = longitudeRegex.allMatches(result).toList();
+      final List<EphemerisData> data = dataLines.map((line) {
+        final parts = line.trim().split(RegExp(r'\s+'));
+        final String datePart = '${parts[0]} ${parts[1]}';
+        final double lon = double.parse(parts[2]);
+        final double lat = double.parse(parts[3]);
+        final double range = double.parse(parts[4]);
 
-      log('Matches $matches');
+        return EphemerisData(
+          timestamp: DateTime.parse(_convertToIso(datePart)),
+          longitude: lon,
+          latitude: lat,
+          range: range,
+        );
+      }).toList();
 
-      if (matches.isEmpty) {
-        throw Exception('No celestial longitudes found in the response');
-      }
-
-      // Extract Moon and Sun longitudes safely
-      final double? moonLongitude = matches.isNotEmpty
-          ? double.tryParse(matches[0].group(1) ?? '')
-          : null;
-      final double? sunLongitude = matches.isNotEmpty && matches.length > 1
-          ? double.tryParse(matches[1].group(1) ?? '')
-          : null;
-
-      // Ensure both values are present
-      if (moonLongitude == null || sunLongitude == null) {
-        throw Exception('Failed to parse celestial longitudes');
-      }
-
-      // Calculate Moon Phase
-      final double elongation = (moonLongitude - sunLongitude) % 360;
-      final String moonPhase = _calculateMoonPhase(elongation);
-
-      return {
-        'moonLongitude': moonLongitude,
-        'sunLongitude': sunLongitude,
-        'moonPhase': moonPhase,
-      };
+      return data;
     } catch (e) {
-      log('Error parsing astro data: $e');
-      return {};
+      log('Parse Error: $e');
+      return [];
     }
   }
 
-  /// Determines the Moon Phase based on the elongation angle.
-  static String _calculateMoonPhase(double elongation) {
-    log('elongation: $elongation');
-    if (elongation < 0) elongation += 360; // Ensure positive elongation
+  static String _convertToIso(String dateStr) {
+    final months = {
+      'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04',
+      'May': '05', 'Jun': '06', 'Jul': '07', 'Aug': '08',
+      'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+    };
 
-    if (elongation >= 0 && elongation < 22.5) return "New Moon";
-    if (elongation >= 22.5 && elongation < 67.5) return "Waxing Crescent";
-    if (elongation >= 67.5 && elongation < 112.5) return "First Quarter";
-    if (elongation >= 112.5 && elongation < 157.5) return "Waxing Gibbous";
-    if (elongation >= 157.5 && elongation < 202.5) return "Full Moon";
-    if (elongation >= 202.5 && elongation < 247.5) return "Waning Gibbous";
-    if (elongation >= 247.5 && elongation < 292.5) return "Last Quarter";
-    if (elongation >= 292.5 && elongation < 337.5) return "Waning Crescent";
-    
-    return "Unknown Moon Phase";
+    final parts = dateStr.split(RegExp(r'[-\s]'));
+    if (parts.length < 4) {
+      throw FormatException("Date string malformed: $dateStr");
+    }
+
+    final year = parts[0];
+    final month = months[parts[1]]!;
+    final day = parts[2].padLeft(2, '0'); // just in case
+    final time = parts[3];
+
+    return '${year}-${month}-${day}T${time}:00';
   }
-
 }
