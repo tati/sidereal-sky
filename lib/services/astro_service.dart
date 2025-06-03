@@ -9,23 +9,25 @@ class AstroService {
   static Future<String> fetchAstroData({
     required String startDate,
     required String endDate,
-    String stepSize = '1h',
+    required String stepSize,
   }) async {
     try {
+      log("✅ Fetching the astro data using the NASA JPL Horizons API");
       final Uri requestUrl = Uri.parse(
         '$_baseUrl?format=json'
-        '&COMMAND="301,10"' // Moon (301) and Sun (10)
+        '&COMMAND="301"' // Moon (301)
         '&EPHEM_TYPE=OBSERVER'
         '&CENTER=500@399'
         '&START_TIME=${Uri.encodeComponent(startDate)}'
         '&STOP_TIME=${Uri.encodeComponent(endDate)}'
         '&STEP_SIZE=${Uri.encodeComponent(stepSize)}'
-        '&QUANTITIES=2',
+        '&QUANTITIES=23',
       );
 
       log('Request URL: $requestUrl');
       final http.Response response = await http.get(requestUrl);
       log('response.statusCode: ${response.statusCode}');
+      log("✅ Astro data has been fetched");
       log('Raw Response: ${response.body}');
 
       if (response.statusCode == 200) {
@@ -104,6 +106,6 @@ class AstroService {
     final day = parts[2].padLeft(2, '0'); // just in case
     final time = parts[3];
 
-    return '${year}-${month}-${day}T${time}:00';
+    return '$year-$month-${day}T$time:00';
   }
 }

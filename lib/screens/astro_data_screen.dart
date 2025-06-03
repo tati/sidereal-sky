@@ -20,22 +20,27 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
   Future<void> _fetchData() async {
     try {
-      final String startDate = DateTime.now().toIso8601String().split('T').first;
-      final String endDate = DateTime.now()
-          .add(const Duration(days: 1))
-          .toIso8601String()
-          .split('T')
-          .first;
 
-      log(startDate);
-      log(endDate);
+      final DateTime now = DateTime.now().toUtc();
+      final DateTime start = now.subtract(const Duration(minutes: 1));
+      final DateTime end = now.add(const Duration(minutes: 1));
+
+      String formatDateTime(DateTime dt) =>
+          dt.toIso8601String().split('.').first + 'Z';
+
+      final String startDate = formatDateTime(start);
+      final String endDate = formatDateTime(end);
+      final String stepSize = "1m"; // low-cost, precise
+
+      log("🌙 Start Date: $startDate");
+      log("☀️ End Date: $endDate");
+      log("⏱️ Step Size: $stepSize");
 
       final String apiResponse = await AstroService.fetchAstroData(
         startDate: startDate,
         endDate: endDate,
+        stepSize: stepSize,
       );
-      log("Astro data has been fetched");
-      log(apiResponse);
 
       final List<EphemerisData> astroData = AstroService.parseAstroData(apiResponse);
 
@@ -45,7 +50,9 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
       // Assuming the first two entries are Moon and Sun in order
       final moonLongitude = astroData[0].longitude;
+      log("moonLongitude: $moonLongitude");
       final sunLongitude = astroData[1].longitude;
+      log("sunLongitude:: $sunLongitude");
 
       // Calculate elongation and moon phase
       final double elongation = (moonLongitude - sunLongitude) % 360;
