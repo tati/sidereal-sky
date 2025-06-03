@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:developer';
+import 'dart:math';
+import 'dart:developer' as dev;
 import 'package:http/http.dart' as http;
 import 'models/ephemeris_data.dart';
 
@@ -12,23 +13,24 @@ class AstroService {
     required String stepSize,
   }) async {
     try {
-      log("✅ Fetching the astro data using the NASA JPL Horizons API");
+      dev.log("✅ Fetching the astro data using the NASA JPL Horizons API");
       final Uri requestUrl = Uri.parse(
         '$_baseUrl?format=json'
-        '&COMMAND="301"' // Moon (301)
-        '&EPHEM_TYPE=OBSERVER'
+        '&COMMAND=301'
+        '&EPHEM_TYPE=VECTORS'
         '&CENTER=500@399'
+        '&REF_PLANE=ECLIPTIC'
+        '&REF_SYSTEM=ICRF'
         '&START_TIME=${Uri.encodeComponent(startDate)}'
         '&STOP_TIME=${Uri.encodeComponent(endDate)}'
         '&STEP_SIZE=${Uri.encodeComponent(stepSize)}'
-        '&QUANTITIES=23',
+        '&VEC_TABLE=3',
       );
 
-      log('Request URL: $requestUrl');
+      dev.log('Request URL: $requestUrl');
       final http.Response response = await http.get(requestUrl);
-      log('response.statusCode: ${response.statusCode}');
-      log("✅ Astro data has been fetched");
-      log('Raw Response: ${response.body}');
+      dev.log('response.statusCode: ${response.statusCode}');
+      dev.log("✅ Astro data has been fetched");
 
       if (response.statusCode == 200) {
         return response.body;
@@ -36,25 +38,9 @@ class AstroService {
         throw Exception('HTTP Error: ${response.statusCode}');
       }
     } catch (e) {
-      log('HTTP Request Error: $e');
+      dev.log('HTTP Request Error: $e');
       return '{"error":"$e"}';
     }
-  }
-
-  static String calculateMoonPhase(double elongation) {
-    if (elongation < 0) elongation += 360;
-    elongation = elongation % 360;
-
-    if (elongation < 22.5 || elongation >= 337.5) return "New Moon";
-    if (elongation >= 22.5 && elongation < 67.5) return "Waxing Crescent";
-    if (elongation >= 67.5 && elongation < 112.5) return "First Quarter";
-    if (elongation >= 112.5 && elongation < 157.5) return "Waxing Gibbous";
-    if (elongation >= 157.5 && elongation < 202.5) return "Full Moon";
-    if (elongation >= 202.5 && elongation < 247.5) return "Waning Gibbous";
-    if (elongation >= 247.5 && elongation < 292.5) return "Last Quarter";
-    if (elongation >= 292.5 && elongation < 337.5) return "Waning Crescent";
-
-    return "Unknown Phase";
   }
 
   static List<EphemerisData> parseAstroData(String response) {
@@ -66,55 +52,92 @@ class AstroService {
       final int soeIndex = lines.indexWhere((line) => line.contains(r'$$SOE'));
       final int eoeIndex = lines.indexWhere((line) => line.contains(r'$$EOE'));
 
-      log("SOE index: $soeIndex");
-      log("EOE index: $eoeIndex");
+      dev.log("🔍 SOE index: $soeIndex");
+      dev.log("🔍 EOE index: $eoeIndex");
 
       if (soeIndex == -1 || eoeIndex == -1 || eoeIndex <= soeIndex) {
-        log("❌ Could not find valid SOE/EOE markers in response.");
+        dev.log("❌ Could not find valid SOE/EOE markers in response.");
         return [];
       }
 
       final List<String> dataLines = lines.sublist(soeIndex + 1, eoeIndex);
       final List<EphemerisData> data = [];
 
-      for (final line in dataLines) {
-        final parts = line.trim().split(RegExp(r'\s+'));
+      for (int i = 0; i < dataLines.length; i++) {
+        final line = dataLines[i];
 
-        if (parts.length < 3 || !RegExp(r'\d{4}-?[A-Za-z]{3}-?\d{2}').hasMatch(parts[0])) {
-          log("⚠️ Skipping non-ephemeris line: $line");
+        final dateMatch = RegExp(r'= A\.D\. (\d{4}-[A-Za-z]{3}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?)').firstMatch(line);
+        if (dateMatch == null) continue;
+
+        final String dateStr = dateMatch.group(1)!;
+
+        // Search for the vector data in the next few lines
+        String? vectorLine;
+        for (int j = 1; j <= 3 && i + j < dataLines.length; j++) {
+          if (dataLines[i + j].contains('X=') && dataLines[i + j].contains('Y=') && dataLines[i + j].contains('Z=')) {
+            vectorLine = dataLines[i + j];
+            break;
+          }
+        }
+
+        if (vectorLine == null) {
+          dev.log("⚠️ Skipping line with missing vector data:\n$line");
           continue;
         }
 
-        final String datePart = '${parts[0]} ${parts[1]}';
+        final xMatch = RegExp(r'X=\s*([-\d.E+]+)').firstMatch(vectorLine);
+        final yMatch = RegExp(r'Y=\s*([-\d.E+]+)').firstMatch(vectorLine);
+        final zMatch = RegExp(r'Z=\s*([-\d.E+]+)').firstMatch(vectorLine);
+
+        if (xMatch == null || yMatch == null || zMatch == null) {
+          dev.log("⚠️ Skipping vector line with missing components:\n$vectorLine");
+          continue;
+        }
 
         try {
-          // Guard against non-numeric longitude
-          if (!RegExp(r'^-?\d+(\.\d+)?$').hasMatch(parts[2])) {
-            log("⚠️ Skipping line with invalid longitude: $line");
-            continue;
-          }
+          final double x = double.parse(xMatch.group(1)!);
+          final double y = double.parse(yMatch.group(1)!);
+          final double z = double.parse(zMatch.group(1)!);
 
-          final double lon = double.parse(parts[2]);
-          final double lat = 0.0;
-          final double range = 0.0;
+          final double lon = (atan2(y, x) * 180 / pi + 360) % 360;
+          final double lat = (atan2(z, sqrt(x * x + y * y)) * 180 / pi);
+          final double range = sqrt(x * x + y * y + z * z);
+
+          final DateTime timestamp = DateTime.parse(_convertToIso(dateStr));
 
           data.add(EphemerisData(
-            timestamp: DateTime.parse(_convertToIso(datePart)),
+            timestamp: timestamp,
             longitude: lon,
             latitude: lat,
             range: range,
           ));
+
+          dev.log("✅ Parsed: $timestamp | lon=$lon | lat=$lat | range=$range");
         } catch (e) {
-          log("⚠️ Skipped malformed ephemeris line: $line");
+          dev.log("⚠️ Exception parsing vector line: $vectorLine\nReason: $e");
         }
       }
 
-      log("Returning Ephemeris data ${data.length} item(s)");
+      dev.log("✅ Returning Ephemeris data: ${data.length} item(s)");
       return data;
     } catch (e) {
-      log('❌ Parse Error: $e');
+      dev.log('❌ Parse Error: $e');
       return [];
     }
+  }
+
+  static String calculateMoonPhase(double elongation) {
+    if (elongation < 0) elongation += 360;
+    elongation = elongation % 360;
+
+    if (elongation < 22.5 || elongation >= 337.5) return "New Moon";
+    if (elongation < 67.5) return "Waxing Crescent";
+    if (elongation < 112.5) return "First Quarter";
+    if (elongation < 157.5) return "Waxing Gibbous";
+    if (elongation < 202.5) return "Full Moon";
+    if (elongation < 247.5) return "Waning Gibbous";
+    if (elongation < 292.5) return "Last Quarter";
+    return "Waning Crescent";
   }
 
   static String _convertToIso(String dateStr) {
@@ -124,16 +147,18 @@ class AstroService {
       'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
     };
 
-    final parts = dateStr.split(RegExp(r'[-\s]'));
-    if (parts.length < 4) {
+    final parts = dateStr.split(RegExp(r'[-\s:]'));
+    if (parts.length < 5) {
       throw FormatException("Date string malformed: $dateStr");
     }
 
     final year = parts[0];
     final month = months[parts[1]]!;
     final day = parts[2].padLeft(2, '0');
-    final time = parts[3];
+    final hour = parts[3].padLeft(2, '0');
+    final minute = parts[4].padLeft(2, '0');
+    final second = parts.length > 5 ? parts[5].padLeft(2, '0') : '00';
 
-    return '$year-$month-${day}T$time';
+    return '$year-$month-${day}T$hour:$minute:$second';
   }
 }
