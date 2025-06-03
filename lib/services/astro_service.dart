@@ -42,20 +42,20 @@ class AstroService {
   }
 
   static String calculateMoonPhase(double elongation) {
-  if (elongation < 0) elongation += 360;
-  elongation = elongation % 360;
+    if (elongation < 0) elongation += 360;
+    elongation = elongation % 360;
 
-  if (elongation < 22.5 || elongation >= 337.5) return "New Moon";
-  if (elongation >= 22.5 && elongation < 67.5) return "Waxing Crescent";
-  if (elongation >= 67.5 && elongation < 112.5) return "First Quarter";
-  if (elongation >= 112.5 && elongation < 157.5) return "Waxing Gibbous";
-  if (elongation >= 157.5 && elongation < 202.5) return "Full Moon";
-  if (elongation >= 202.5 && elongation < 247.5) return "Waning Gibbous";
-  if (elongation >= 247.5 && elongation < 292.5) return "Last Quarter";
-  if (elongation >= 292.5 && elongation < 337.5) return "Waning Crescent";
+    if (elongation < 22.5 || elongation >= 337.5) return "New Moon";
+    if (elongation >= 22.5 && elongation < 67.5) return "Waxing Crescent";
+    if (elongation >= 67.5 && elongation < 112.5) return "First Quarter";
+    if (elongation >= 112.5 && elongation < 157.5) return "Waxing Gibbous";
+    if (elongation >= 157.5 && elongation < 202.5) return "Full Moon";
+    if (elongation >= 202.5 && elongation < 247.5) return "Waning Gibbous";
+    if (elongation >= 247.5 && elongation < 292.5) return "Last Quarter";
+    if (elongation >= 292.5 && elongation < 337.5) return "Waning Crescent";
 
-  return "Unknown Phase";
-}
+    return "Unknown Phase";
+  }
 
   static List<EphemerisData> parseAstroData(String response) {
     try {
@@ -63,28 +63,56 @@ class AstroService {
       final String result = jsonResponse['result'];
       final List<String> lines = LineSplitter.split(result).toList();
 
-      final int startIndex = lines.indexWhere((line) => line.contains(r'$$SOE')) + 1;
-      final int endIndex = lines.indexWhere((line) => line.contains(r'$$EOE'));
-      final List<String> dataLines = lines.sublist(startIndex, endIndex);
+      final int soeIndex = lines.indexWhere((line) => line.contains(r'$$SOE'));
+      final int eoeIndex = lines.indexWhere((line) => line.contains(r'$$EOE'));
 
-      final List<EphemerisData> data = dataLines.map((line) {
+      log("SOE index: $soeIndex");
+      log("EOE index: $eoeIndex");
+
+      if (soeIndex == -1 || eoeIndex == -1 || eoeIndex <= soeIndex) {
+        log("❌ Could not find valid SOE/EOE markers in response.");
+        return [];
+      }
+
+      final List<String> dataLines = lines.sublist(soeIndex + 1, eoeIndex);
+      final List<EphemerisData> data = [];
+
+      for (final line in dataLines) {
         final parts = line.trim().split(RegExp(r'\s+'));
+
+        if (parts.length < 3 || !RegExp(r'\d{4}-?[A-Za-z]{3}-?\d{2}').hasMatch(parts[0])) {
+          log("⚠️ Skipping non-ephemeris line: $line");
+          continue;
+        }
+
         final String datePart = '${parts[0]} ${parts[1]}';
-        final double lon = double.parse(parts[2]);
-        final double lat = double.parse(parts[3]);
-        final double range = double.parse(parts[4]);
 
-        return EphemerisData(
-          timestamp: DateTime.parse(_convertToIso(datePart)),
-          longitude: lon,
-          latitude: lat,
-          range: range,
-        );
-      }).toList();
+        try {
+          // Guard against non-numeric longitude
+          if (!RegExp(r'^-?\d+(\.\d+)?$').hasMatch(parts[2])) {
+            log("⚠️ Skipping line with invalid longitude: $line");
+            continue;
+          }
 
+          final double lon = double.parse(parts[2]);
+          final double lat = 0.0;
+          final double range = 0.0;
+
+          data.add(EphemerisData(
+            timestamp: DateTime.parse(_convertToIso(datePart)),
+            longitude: lon,
+            latitude: lat,
+            range: range,
+          ));
+        } catch (e) {
+          log("⚠️ Skipped malformed ephemeris line: $line");
+        }
+      }
+
+      log("Returning Ephemeris data ${data.length} item(s)");
       return data;
     } catch (e) {
-      log('Parse Error: $e');
+      log('❌ Parse Error: $e');
       return [];
     }
   }
@@ -103,9 +131,9 @@ class AstroService {
 
     final year = parts[0];
     final month = months[parts[1]]!;
-    final day = parts[2].padLeft(2, '0'); // just in case
+    final day = parts[2].padLeft(2, '0');
     final time = parts[3];
 
-    return '$year-$month-${day}T$time:00';
+    return '$year-$month-${day}T$time';
   }
 }

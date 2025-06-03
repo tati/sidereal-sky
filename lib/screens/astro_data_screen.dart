@@ -20,7 +20,6 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
   Future<void> _fetchData() async {
     try {
-
       final DateTime now = DateTime.now().toUtc();
       final DateTime start = now.subtract(const Duration(minutes: 1));
       final DateTime end = now.add(const Duration(minutes: 1));
@@ -30,11 +29,11 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
       final String startDate = formatDateTime(start);
       final String endDate = formatDateTime(end);
-      final String stepSize = "1m"; // low-cost, precise
+      final String stepSize = "1m";
 
-      log("🌙 Start Date: $startDate");
-      log("☀️ End Date: $endDate");
-      log("⏱️ Step Size: $stepSize");
+      log("\uD83C\uDF19 Start Date: $startDate");
+      log("\u2600\uFE0F End Date: $endDate");
+      log("\u23F1\uFE0F Step Size: $stepSize");
 
       final String apiResponse = await AstroService.fetchAstroData(
         startDate: startDate,
@@ -44,30 +43,24 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
 
       final List<EphemerisData> astroData = AstroService.parseAstroData(apiResponse);
 
-      if (astroData.length < 2) {
-        throw Exception("Not enough data points to compute Moon and Sun positions.");
+      if (astroData.isEmpty) {
+        throw Exception("Insufficient Moon data for calculation.");
       }
 
-      // Assuming the first two entries are Moon and Sun in order
       final moonLongitude = astroData[0].longitude;
-      log("moonLongitude: $moonLongitude");
-      final sunLongitude = astroData[1].longitude;
-      log("sunLongitude:: $sunLongitude");
+      log("\uD83C\uDF19 moonLongitude: $moonLongitude");
 
-      // Calculate elongation and moon phase
-      final double elongation = (moonLongitude - sunLongitude) % 360;
+      final double elongation = moonLongitude % 360;
       final String moonPhase = AstroService.calculateMoonPhase(elongation);
 
-      // Astrology adjustment
-      const double ayanamsa = 23.856;
-      final double adjustedLongitude = adjustToTropical(moonLongitude, ayanamsa);
+      // Tropical zodiac: do not adjust with ayanamsa
+      final double adjustedLongitude = moonLongitude;
       final String astrologySign = getAstrologySign(adjustedLongitude);
 
       setState(() {
         _response = '''
 Moon Phase: $moonPhase
 Moon Longitude: $moonLongitude°
-Sun Longitude: $sunLongitude°
 Adjusted Longitude (Tropical): $adjustedLongitude°
 Astrology Sign: $astrologySign
 ''';
