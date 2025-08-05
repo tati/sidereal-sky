@@ -14,7 +14,7 @@ class AstroDataApp extends StatelessWidget {
       title: 'Oracle',
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: const Color.fromARGB(255, 53, 21, 110),
+        scaffoldBackgroundColor: Colors.transparent,
       ),
       home: const AstroDataScreenWithOverlay(),
     );
@@ -27,8 +27,22 @@ class AstroDataScreenWithOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.transparent, // Make scaffold background transparent
       body: Stack(
         children: [
+          // Gradient background
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFFE1BEE7), // Light purple
+                  Color(0xFF4A148C), // Dark purple
+                ],
+              ),
+            ),
+          ),
           const AstroDataScreen(), // Your main app content
           Positioned(
             top: 0,

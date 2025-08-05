@@ -84,7 +84,7 @@ Astrology Sign: $astrologySign
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.transparent, // Allow gradient from parent to show
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
