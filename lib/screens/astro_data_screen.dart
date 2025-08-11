@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
+import 'package:intl/intl.dart'; // Add this line
 import '../services/astro_service.dart';
 import '../utils/astro_utils.dart';
 import '../widgets/moon_phase_widget.dart';
@@ -89,6 +90,15 @@ Astrology Sign: $astrologySign
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Text(
+              DateFormat('EEEE, MMMM d, y').format(DateTime.now()),
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 16), // Space below the date
             SizedBox(
               width: 140,
               child: MoonPhaseWidget(moonPhase: _currentMoonPhase),
