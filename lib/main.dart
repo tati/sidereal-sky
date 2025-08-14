@@ -44,16 +44,6 @@ class AstroDataScreenWithOverlay extends StatelessWidget {
             ),
           ),
           const AstroDataScreen(), // Your main app content
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Image.asset(
-              'assets/images/glow_circle_overlay.png',
-              fit: BoxFit.cover,
-            ),
-          ),
           // Positioned widget to place your logo at the bottom right
         ],
       ),
