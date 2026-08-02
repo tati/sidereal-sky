@@ -2,7 +2,7 @@
 
 **Last updated:** August 2, 2026
 
-Sidereal Sky ("the app," "we," "our") is developed by Tatiana [Last Name] ("we," "us"). This Privacy Policy explains what information the app accesses, how it is used, and your choices regarding that information.
+Sidereal Sky ("the app," "we," "our") is developed by Valkyrie Agency LLC ("we," "us"). This Privacy Policy explains what information the app accesses, how it is used, and your choices regarding that information.
 
 ## Summary
 
