@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
-import 'package:intl/intl.dart'; // Add this line
+import 'package:intl/intl.dart';
 import '../services/astro_service.dart';
 import '../utils/astro_utils.dart';
 import '../widgets/moon_phase_widget.dart';
+import '../theme/delphi_text_styles.dart';
 import 'dart:developer';
 import '../services/models/ephemeris_data.dart';
 
@@ -18,6 +20,14 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   String _response = "Loading Astro data...";
   String _moonPhaseHtml = "";
   String _currentMoonPhase = "";
+  double _siderealLongitude = 0;
+  double _elongation = 0;
+  String _sunSign = "";
+  String _sunLonDisplay = "";
+  String _sunSiderealDisplay = "";
+  String _moonLonDisplay = "";
+  String _moonSiderealDisplay = "";
+  String _moonSignName = "";
 
   Future<void> _fetchData() async {
     try {
@@ -32,41 +42,46 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
       final String endDate = formatDateTime(end);
       final String stepSize = "1m";
 
-      log("\uD83C\uDF19 Start Date: $startDate");
-      log("\u2600\uFE0F End Date: $endDate");
-      log("\u23F1\uFE0F Step Size: $stepSize");
+      log("🌙 Start Date: $startDate");
+      log("☀️ End Date: $endDate");
+      log("⏱️ Step Size: $stepSize");
 
-      final String apiResponse = await AstroService.fetchAstroData(
-        startDate: startDate,
-        endDate: endDate,
-        stepSize: stepSize,
-      );
+      final results = await Future.wait([
+        AstroService.fetchAstroData(startDate: startDate, endDate: endDate, stepSize: stepSize, command: '301'),
+        AstroService.fetchAstroData(startDate: startDate, endDate: endDate, stepSize: stepSize, command: '10'),
+      ]);
 
-      final List<EphemerisData> astroData = AstroService.parseAstroData(apiResponse);
+      final List<EphemerisData> moonData = AstroService.parseAstroData(results[0]);
+      final List<EphemerisData> sunData = AstroService.parseAstroData(results[1]);
 
-      if (astroData.isEmpty) {
-        throw Exception("Insufficient Moon data for calculation.");
-      }
+      if (moonData.isEmpty) throw Exception("Insufficient Moon data for calculation.");
+      if (sunData.isEmpty) throw Exception("Insufficient Sun data for calculation.");
 
-      final moonLongitude = astroData[0].longitude;
-      log("\uD83C\uDF19 moonLongitude: $moonLongitude");
+      final moonLongitude = moonData[0].longitude;
+      final sunLongitude = sunData[0].longitude;
+      log("🌙 moonLongitude: $moonLongitude");
+      log("☀️ sunLongitude: $sunLongitude");
 
-      final double elongation = moonLongitude % 360;
+      final double elongation = (moonLongitude - sunLongitude + 360) % 360;
       final String moonPhase = AstroService.calculateMoonPhase(elongation);
 
-      // Tropical zodiac: do not adjust with ayanamsa
-      final double adjustedLongitude = moonLongitude;
-      final String astrologySign = getAstrologySign(adjustedLongitude);
+      final double ayanamsa = calculateLahiriAyanamsa(DateTime.now());
+      final double siderealMoonLon = adjustToSidereal(moonLongitude, ayanamsa);
+      final double siderealSunLon = adjustToSidereal(sunLongitude, ayanamsa);
+      final String moonSign = getAstrologySign(siderealMoonLon);
+      final String sunSign = getAstrologySign(siderealSunLon);
 
       setState(() {
-        _response = '''
-Moon Phase: $moonPhase
-Moon Longitude: $moonLongitude°
-Adjusted Longitude (Tropical): $adjustedLongitude°
-Astrology Sign: $astrologySign
-''';
         _moonPhaseHtml = generateMoonPhaseHtml(moonPhase);
         _currentMoonPhase = moonPhase;
+        _siderealLongitude = siderealMoonLon;
+        _elongation = elongation;
+        _sunSign = sunSign;
+        _sunLonDisplay = '${sunLongitude.toStringAsFixed(4)}°';
+        _sunSiderealDisplay = '${siderealSunLon.toStringAsFixed(4)}°';
+        _moonLonDisplay = '${moonLongitude.toStringAsFixed(4)}°';
+        _moonSiderealDisplay = '${siderealMoonLon.toStringAsFixed(4)}°';
+        _moonSignName = moonSign;
       });
     } catch (e) {
       setState(() {
@@ -82,81 +97,190 @@ Astrology Sign: $astrologySign
     _fetchData();
   }
 
+  String _signImagePath(String sign) {
+    const base = 'assets/images/Astrology Signs/';
+    const signs = {
+      'Aries': 'Aries.png', 'Taurus': 'Taurus.png', 'Gemini': 'Gemini.png',
+      'Cancer': 'Cancer.png', 'Leo': 'Leo.png', 'Virgo': 'Virgo.png',
+      'Libra': 'Libra.png', 'Scorpio': 'Scorpio.png', 'Sagittarius': 'Sagittarius.png',
+      'Capricorn': 'Capricorn.png', 'Aquarius': 'Aquarius.png', 'Pisces': 'Pisces.png',
+    };
+    return base + (signs[sign] ?? 'Aries.png');
+  }
+
+  // Sign glyphs are Image assets — not text — so typography changes don't affect them.
+  Widget _signCircle(String label, String sign) {
+    return Column(
+      children: [
+        Text(label, style: delphiUtilityStyle.copyWith(color: Colors.white.withOpacity(0.8))),
+        const SizedBox(height: 8),
+        Container(
+          width: 100,
+          height: 100,
+          decoration: const BoxDecoration(
+            color: Color(0xFF080010),
+            shape: BoxShape.circle,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(22),
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                ImageFiltered(
+                  imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                  child: Image.asset(
+                    _signImagePath(sign),
+                    color: const Color(0xFFDBA54A).withOpacity(0.8),
+                    colorBlendMode: BlendMode.srcIn,
+                  ),
+                ),
+                Image.asset(
+                  _signImagePath(sign),
+                  color: const Color(0xFFDBA54A),
+                  colorBlendMode: BlendMode.srcIn,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showInfoDialog(BuildContext context) {
+    const entries = [
+      ('Sidereal', 'The zodiac system based on the actual current positions of the constellations in the sky, rather than the seasons. Delphi uses this system.'),
+      ('Sun Longitude', 'The sun\'s raw position in degrees along the ecliptic (the sun\'s apparent path through the sky), measured tropically, before conversion to the sidereal system.'),
+      ('Sun Sidereal', 'The sun\'s position in degrees once the sidereal correction (ayanamsa) has been applied, along with the sign that position falls in.'),
+      ('Moon Longitude', 'The moon\'s raw position in degrees along the ecliptic, measured tropically, before conversion to the sidereal system.'),
+      ('Moon Sidereal', 'The moon\'s position in degrees once the sidereal correction has been applied, along with the sign that position falls in.'),
+      ('Moon Phase', 'The moon\'s current stage in its roughly 29 day cycle, based on how much of it is illuminated by the sun as seen from Earth.'),
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: const Color(0xFF1A0A2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Sidereal Sky', style: delphiLabelStyle),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white54),
+                      onPressed: () => Navigator.of(context).pop(),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'The main screen displays sidereal positions only. Raw tropical longitudes are included below for transparency and educational purposes.',
+                  style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white54),
+                ),
+                const SizedBox(height: 20),
+                // Raw calculation data
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3D1A52).withOpacity(0.6),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Raw Calculations', style: delphiBodyItalicStyle.copyWith(color: const Color(0xFFDBA54A), fontSize: 15)),
+                      const SizedBox(height: 10),
+                      _rawRow('Sun Longitude', _sunLonDisplay),
+                      _rawRow('Sun Sidereal', '$_sunSiderealDisplay ($_sunSign)'),
+                      _rawRow('Moon Longitude', _moonLonDisplay),
+                      _rawRow('Moon Sidereal', '$_moonSiderealDisplay ($_moonSignName)'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Glossary
+                ...entries.map((e) => Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(e.$1, style: delphiBodyItalicStyle.copyWith(color: const Color(0xFFDBA54A))),
+                      const SizedBox(height: 4),
+                      Text(e.$2, style: delphiBodyStyle.copyWith(fontSize: 14, color: Colors.white70)),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _rawRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white54)),
+          Text(value, style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white70)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Center(
-            child: Padding(
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
+            child: Center(
+              child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                // 1. Date at the top with underline
+                // Sidereal Sky header
                 Column(
                   children: [
                     Text(
-                      DateFormat('MMMM d, y').format(DateTime.now()),
-                      style: const TextStyle(
-                        fontSize: 28,
-                        color: Colors.indigo,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      "Sidereal Sky",
+                      style: delphiLabelStyle.copyWith(color: const Color(0xFF4A148C)),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       height: 2,
                       width: 220,
-                      color: Colors.indigo,
+                      color: const Color(0xFF4A148C),
                     ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                // 2. Large oval with moon phase name and divider
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 18),
-                  decoration: BoxDecoration(
-                    color: Colors.deepPurple[200],
-                    borderRadius: BorderRadius.circular(60),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        _currentMoonPhase.isEmpty ? "Moon Phase" : _currentMoonPhase,
-                        style: const TextStyle(
-                          fontSize: 26,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      // Decorative divider
-                      const Text(
-                        "﹌        ⁕        ﹌",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w300,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // 3. Large circle with moon phase image
+                // Moon phase image circle
                 Container(
                   width: 260,
                   height: 260,
                   decoration: BoxDecoration(
-                    color: Colors.deepPurple[800],
+                    color: const Color(0xFF080010),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
@@ -167,36 +291,57 @@ Astrology Sign: $astrologySign
                     ],
                   ),
                   child: Center(
-                    child: SizedBox(
+                    child: Container(
                       width: 140,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFDBA54A).withOpacity(0.55),
+                            blurRadius: 28,
+                            spreadRadius: 6,
+                          ),
+                        ],
+                      ),
                       child: MoonPhaseWidget(moonPhase: _currentMoonPhase),
                     ),
                   ),
                 ),
-                const SizedBox(height: 32),
-                // 4. Rounded rectangle with tab for "Longitudes"
+                const SizedBox(height: 40),
+                // Sidereal Longitudes card
                 Stack(
                   clipBehavior: Clip.none,
                   children: [
-                    // Main rounded rectangle
                     Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                      padding: const EdgeInsets.fromLTRB(32, 38, 32, 28),
                       margin: const EdgeInsets.only(top: 18),
                       decoration: BoxDecoration(
-                        color: Colors.deepPurple[300]?.withOpacity(0.55),
+                        color: const Color(0xFF3D1A52).withOpacity(0.80),
                         borderRadius: BorderRadius.circular(24),
                       ),
-                      child: Text(
-                        _response,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          color: Colors.white,
-                        ),
-                      ),
+                      child: _sunSiderealDisplay.isEmpty
+                          ? Text('Loading...', textAlign: TextAlign.center, style: delphiBodyStyle)
+                          : RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: delphiBodyStyle,
+                                children: [
+                                  TextSpan(text: 'Sun: $_sunSiderealDisplay '),
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: Text(_sunSign, style: const TextStyle(fontFamily: 'Maragsa', fontSize: 18, color: Colors.white)),
+                                  ),
+                                  TextSpan(text: '\nMoon: $_moonSiderealDisplay '),
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.middle,
+                                    child: Text(_moonSignName, style: const TextStyle(fontFamily: 'Maragsa', fontSize: 18, color: Colors.white)),
+                                  ),
+                                  TextSpan(text: '\nMoon Phase: $_currentMoonPhase'),
+                                ],
+                              ),
+                            ),
                     ),
-                    // Tab
                     Positioned(
                       top: 0,
                       left: 0,
@@ -208,55 +353,49 @@ Astrology Sign: $astrologySign
                             color: Colors.deepPurple[700],
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: const Text(
-                            "Longitudes",
-                            style: TextStyle(
-                              fontSize: 20,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Text(
+                            DateFormat('MMMM d, y').format(DateTime.now()),
+                            style: delphiHeaderStyle.copyWith(fontSize: 16),
                           ),
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
-                // 5. Astrological Sign label and glyph
-                Text(
-                  "Astrological Sign",
-                  style: TextStyle(
-                    fontSize: 22,
-                    color: Colors.white.withOpacity(0.9),
-                    fontWeight: FontWeight.w500,
-                  ),
+                const SizedBox(height: 24),
+                // Sun and Moon sign glyphs (Image assets — not text)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _signCircle("☀️ Sun", _sunSign.isEmpty ? "Aries" : _sunSign),
+                    _signCircle("🌙 Moon", getAstrologySign(_siderealLongitude)),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                // Replace with your actual sign widget or SVG
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      getAstrologySign(0), // Replace 0 with your actual longitude
-                      style: const TextStyle(
-                        fontSize: 48,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
               ],
             ),
           ),
         ),
+          ),
+            ),
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Material(
+                color: Colors.white.withOpacity(0.1),
+                shape: const CircleBorder(),
+                child: InkWell(
+                  customBorder: const CircleBorder(),
+                  onTap: () => _showInfoDialog(context),
+                  child: const Padding(
+                    padding: EdgeInsets.all(8),
+                    child: Icon(Icons.question_mark_rounded, color: Colors.white54, size: 18),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
   }
 }

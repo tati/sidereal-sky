@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'screens/astro_data_screen.dart';
 
+const Color delphiBackground = Color(0xFF1a0a2e);
+
 void main() {
   runApp(const AstroDataApp());
 }
@@ -12,6 +14,7 @@ class AstroDataApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Oracle',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
         scaffoldBackgroundColor: Colors.transparent,
@@ -30,19 +33,7 @@ class AstroDataScreenWithOverlay extends StatelessWidget {
       backgroundColor: Colors.transparent, // Make scaffold background transparent
       body: Stack(
         children: [
-          // Gradient background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFFE1BEE7), // Light purple
-                  Color(0xFF4A148C), // Dark purple
-                ],
-              ),
-            ),
-          ),
+          Container(color: delphiBackground),
           const AstroDataScreen(), // Your main app content
           // Positioned widget to place your logo at the bottom right
         ],

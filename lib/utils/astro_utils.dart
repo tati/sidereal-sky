@@ -45,10 +45,18 @@ String getAstrologySign(double longitude) {
   return 'Unknown';
 }
 
-double adjustToTropical(double longitude, double ayanamsa) {
-  double adjustedLongitude = longitude - ayanamsa;
-  if (adjustedLongitude < 0) {
-    adjustedLongitude += 360;
-  }
-  return adjustedLongitude;
+double calculateLahiriAyanamsa(DateTime date) {
+  // Lahiri ayanamsa: 23.856° at J2000.0, precessing at ~50.3 arcseconds/year
+  const double baseAyanamsa = 23.856;
+  const double ratePerYear = 50.3 / 3600.0;
+  final double yearsSince2000 =
+      (date.millisecondsSinceEpoch - DateTime(2000, 1, 1).millisecondsSinceEpoch) /
+      (365.25 * 24 * 3600 * 1000);
+  return baseAyanamsa + (ratePerYear * yearsSince2000);
+}
+
+double adjustToSidereal(double longitude, double ayanamsa) {
+  double adjusted = longitude - ayanamsa;
+  if (adjusted < 0) adjusted += 360;
+  return adjusted;
 }

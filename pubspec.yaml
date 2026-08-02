@@ -28,9 +28,18 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/images/Astrology Signs/
   fonts:
     - family: EBGaramond
       fonts:
         - asset: assets/images/EBGaramond-VariableFont_wght.ttf
+    - family: Maragsa
+      fonts:
+        - asset: assets/images/Maragsa_Display_400.otf
+    - family: LibreBaskerville
+      fonts:
+        - asset: assets/images/LibreBaskerville-Regular.ttf
+        - asset: assets/images/LibreBaskerville-Italic.ttf
+          style: italic
 
 

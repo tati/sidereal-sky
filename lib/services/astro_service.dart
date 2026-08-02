@@ -11,12 +11,13 @@ class AstroService {
     required String startDate,
     required String endDate,
     required String stepSize,
+    String command = '301',
   }) async {
     try {
-      dev.log("✅ Fetching the astro data using the NASA JPL Horizons API");
+      dev.log("✅ Fetching astro data for COMMAND=$command using NASA JPL Horizons API");
       final Uri requestUrl = Uri.parse(
         '$_baseUrl?format=json'
-        '&COMMAND=301'
+        '&COMMAND=$command'
         '&EPHEM_TYPE=VECTORS'
         '&CENTER=500@399'
         '&REF_PLANE=ECLIPTIC'
@@ -71,11 +72,17 @@ class AstroService {
 
         final String dateStr = dateMatch.group(1)!;
 
-        // Search for the vector data in the next few lines
+        // Search for the position vector line in the next few lines.
+        // JPL uses "X =" (space before =) for position and "VX=" for velocity,
+        // so \bX\s*= correctly matches position X but not VX.
         String? vectorLine;
-        for (int j = 1; j <= 3 && i + j < dataLines.length; j++) {
-          if (dataLines[i + j].contains('X=') && dataLines[i + j].contains('Y=') && dataLines[i + j].contains('Z=')) {
-            vectorLine = dataLines[i + j];
+        for (int j = 1; j <= 5 && i + j < dataLines.length; j++) {
+          final candidate = dataLines[i + j];
+          if (RegExp(r'\bX\s*=').hasMatch(candidate) &&
+              RegExp(r'\bY\s*=').hasMatch(candidate) &&
+              RegExp(r'\bZ\s*=').hasMatch(candidate) &&
+              !candidate.contains('LT')) {
+            vectorLine = candidate;
             break;
           }
         }
@@ -85,9 +92,9 @@ class AstroService {
           continue;
         }
 
-        final xMatch = RegExp(r'X=\s*([-\d.E+]+)').firstMatch(vectorLine);
-        final yMatch = RegExp(r'Y=\s*([-\d.E+]+)').firstMatch(vectorLine);
-        final zMatch = RegExp(r'Z=\s*([-\d.E+]+)').firstMatch(vectorLine);
+        final xMatch = RegExp(r'\bX\s*=\s*([-\d.E+]+)').firstMatch(vectorLine);
+        final yMatch = RegExp(r'\bY\s*=\s*([-\d.E+]+)').firstMatch(vectorLine);
+        final zMatch = RegExp(r'\bZ\s*=\s*([-\d.E+]+)').firstMatch(vectorLine);
 
         if (xMatch == null || yMatch == null || zMatch == null) {
           dev.log("⚠️ Skipping vector line with missing components:\n$vectorLine");
