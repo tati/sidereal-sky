@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_html/flutter_html.dart';
 import 'package:intl/intl.dart';
 import '../services/astro_service.dart';
 import '../utils/astro_utils.dart';
@@ -17,11 +16,8 @@ class AstroDataScreen extends StatefulWidget {
 }
 
 class _AstroDataScreenState extends State<AstroDataScreen> {
-  String _response = "Loading Astro data...";
-  String _moonPhaseHtml = "";
   String _currentMoonPhase = "";
   double _siderealLongitude = 0;
-  double _elongation = 0;
   String _sunSign = "";
   String _sunLonDisplay = "";
   String _sunSiderealDisplay = "";
@@ -72,10 +68,8 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
       final String sunSign = getAstrologySign(siderealSunLon);
 
       setState(() {
-        _moonPhaseHtml = generateMoonPhaseHtml(moonPhase);
         _currentMoonPhase = moonPhase;
         _siderealLongitude = siderealMoonLon;
-        _elongation = elongation;
         _sunSign = sunSign;
         _sunLonDisplay = '${sunLongitude.toStringAsFixed(4)}°';
         _sunSiderealDisplay = '${siderealSunLon.toStringAsFixed(4)}°';
@@ -84,9 +78,6 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
         _moonSignName = moonSign;
       });
     } catch (e) {
-      setState(() {
-        _response = "Error: $e";
-      });
       log('Error during Fetch: $e');
     }
   }
