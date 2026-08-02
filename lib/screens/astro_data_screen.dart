@@ -87,11 +87,12 @@ Astrology Sign: $astrologySign
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Column(
-              children: [
+        child: SingleChildScrollView(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
                 // 1. Date at the top with underline
                 Column(
                   children: [
@@ -249,12 +250,13 @@ Astrology Sign: $astrologySign
                     ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(height: 32),
               ],
             ),
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }
