@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
+import 'dart:io';
 import 'screens/astro_data_screen.dart';
 
 const Color delphiBackground = Color(0xFF1a0a2e);
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await _initializeRevenueCat();
   runApp(const AstroDataApp());
+}
+
+Future<void> _initializeRevenueCat() async {
+  String apiKey;
+  if (Platform.isIOS || Platform.isMacOS) {
+    apiKey = 'test_qxenxWfhlJaigznDWMvCMyDjymO';
+  } else if (Platform.isAndroid) {
+    apiKey = 'test_qxenxWfhlJaigznDWMvCMyDjymO';
+  } else {
+    throw UnsupportedError('Platform not supported');
+  }
+  await Purchases.configure(PurchasesConfiguration(apiKey));
 }
 
 class AstroDataApp extends StatelessWidget {

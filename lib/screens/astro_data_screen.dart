@@ -1,12 +1,15 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/astro_service.dart';
+import '../services/birth_info_service.dart';
 import '../utils/astro_utils.dart';
 import '../widgets/moon_phase_widget.dart';
 import '../theme/delphi_text_styles.dart';
 import 'dart:developer';
 import '../services/models/ephemeris_data.dart';
+import 'birth_chart_screen.dart';
 
 class AstroDataScreen extends StatefulWidget {
   const AstroDataScreen({super.key});
@@ -24,6 +27,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   String _moonLonDisplay = "";
   String _moonSiderealDisplay = "";
   String _moonSignName = "";
+  bool _hasChart = false;
 
   Future<void> _fetchData() async {
     try {
@@ -86,6 +90,12 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   void initState() {
     super.initState();
     _fetchData();
+    _checkChart();
+  }
+
+  Future<void> _checkChart() async {
+    final cache = await BirthInfoService.loadChart();
+    if (mounted) setState(() => _hasChart = cache != null);
   }
 
   String _signImagePath(String sign) {
@@ -108,29 +118,40 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
         Container(
           width: 100,
           height: 100,
-          decoration: const BoxDecoration(
-            color: Color(0xFF080010),
+          decoration: BoxDecoration(
+            color: const Color(0xFF080010),
             shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 12, offset: const Offset(0, 6))],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(22),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                ImageFiltered(
-                  imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
-                  child: Image.asset(
-                    _signImagePath(sign),
-                    color: const Color(0xFFDBA54A).withOpacity(0.8),
-                    colorBlendMode: BlendMode.srcIn,
-                  ),
+          child: Center(
+            child: Container(
+              width: 64,
+              height: 64,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: const Color(0xFFDBA54A).withOpacity(0.55), blurRadius: 18, spreadRadius: 3)],
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(10),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ImageFiltered(
+                      imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+                      child: Image.asset(
+                        _signImagePath(sign),
+                        color: const Color(0xFFDBA54A).withOpacity(0.8),
+                        colorBlendMode: BlendMode.srcIn,
+                      ),
+                    ),
+                    Image.asset(
+                      _signImagePath(sign),
+                      color: const Color(0xFFDBA54A),
+                      colorBlendMode: BlendMode.srcIn,
+                    ),
+                  ],
                 ),
-                Image.asset(
-                  _signImagePath(sign),
-                  color: const Color(0xFFDBA54A),
-                  colorBlendMode: BlendMode.srcIn,
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -255,13 +276,24 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
                   children: [
                     Text(
                       "Sidereal Sky",
-                      style: delphiLabelStyle.copyWith(color: const Color(0xFF4A148C)),
+                      style: delphiLabelStyle.copyWith(
+                        color: Colors.white,
+                        shadows: [
+                          Shadow(color: const Color(0xFFDBA54A).withOpacity(0.7), blurRadius: 18),
+                          Shadow(color: const Color(0xFFDBA54A).withOpacity(0.4), blurRadius: 36),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       height: 2,
                       width: 220,
                       color: const Color(0xFF4A148C),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Your eye on the real sky",
+                      style: delphiBodyItalicStyle.copyWith(fontSize: 13, color: Colors.white38),
                     ),
                   ],
                 ),
@@ -354,7 +386,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                // Sun and Moon sign glyphs (Image assets — not text)
+                // Sun and Moon sign glyphs (Image assets, not text)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -369,17 +401,48 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
           ),
             ),
             Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: () => launchUrl(Uri.parse('https://www.delphicollective.org/sidereal-sky')),
+                  child: const Text(
+                    'Privacy Policy',
+                    style: TextStyle(
+                      fontFamily: 'LibreBaskerville',
+                      fontSize: 12,
+                      color: Colors.white24,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
               top: 12,
               right: 12,
               child: Material(
-                color: Colors.white.withOpacity(0.1),
-                shape: const CircleBorder(),
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
                 child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: () => _showInfoDialog(context),
-                  child: const Padding(
-                    padding: EdgeInsets.all(8),
-                    child: Icon(Icons.question_mark_rounded, color: Colors.white54, size: 18),
+                  borderRadius: BorderRadius.circular(20),
+                  onTap: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const BirthChartScreen()));
+                    _checkChart();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFDBA54A).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: const Color(0xFFDBA54A).withOpacity(0.5), width: 1),
+                    ),
+                    child: Text(
+                      _hasChart ? '✦ My Chart' : '✦ Chart',
+                      style: delphiBodyStyle.copyWith(fontSize: 13, color: const Color(0xFFDBA54A), height: 1.0),
+                    ),
                   ),
                 ),
               ),

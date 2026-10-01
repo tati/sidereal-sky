@@ -1,3 +1,5 @@
+import 'dart:math';
+
 String generateMoonPhaseHtml(String moonPhase) {
   const moonCss = '''
     <style>
@@ -59,4 +61,47 @@ double adjustToSidereal(double longitude, double ayanamsa) {
   double adjusted = longitude - ayanamsa;
   if (adjusted < 0) adjusted += 360;
   return adjusted;
+}
+
+// Parses "lat, lon" from a location string. Returns null if not parseable.
+({double lat, double lon})? parseCoordinates(String location) {
+  final parts = location.split(',');
+  if (parts.length != 2) return null;
+  final lat = double.tryParse(parts[0].trim());
+  final lon = double.tryParse(parts[1].trim());
+  if (lat == null || lon == null) return null;
+  return (lat: lat, lon: lon);
+}
+
+// Calculates the sidereal Ascendant (rising sign) given UTC birth datetime and coordinates.
+String? calculateRisingSign(DateTime utcDt, double latDeg, double lonDeg) {
+  // Julian Date
+  final a = (14 - utcDt.month) ~/ 12;
+  final y = utcDt.year + 4800 - a;
+  final m = utcDt.month + 12 * a - 3;
+  final jdn = utcDt.day + (153 * m + 2) ~/ 5 + 365 * y + y ~/ 4 - y ~/ 100 + y ~/ 400 - 32045;
+  final jd = jdn.toDouble() + (utcDt.hour - 12) / 24.0 + utcDt.minute / 1440.0;
+
+  // Greenwich Mean Sidereal Time in degrees
+  double gmst = 280.46061837 + 360.98564736629 * (jd - 2451545.0);
+  gmst = ((gmst % 360) + 360) % 360;
+
+  // Local Sidereal Time
+  final lst = ((gmst + lonDeg) % 360 + 360) % 360;
+
+  // Obliquity of ecliptic
+  const obliquity = 23.4393 * pi / 180;
+  final ramc = lst * pi / 180;
+  final lat = latDeg * pi / 180;
+
+  // Ascendant ecliptic longitude
+  double asc = atan2(-cos(ramc), sin(ramc) * cos(obliquity) + tan(lat) * sin(obliquity));
+  asc = asc * 180 / pi;
+  if (asc < 0) asc += 360;
+
+  // Apply Lahiri ayanamsa for sidereal
+  final ayanamsa = calculateLahiriAyanamsa(utcDt);
+  asc = (asc - ayanamsa + 360) % 360;
+
+  return getAstrologySign(asc);
 }
