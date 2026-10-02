@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -126,10 +127,10 @@ class _BirthChartScreenState extends State<BirthChartScreen> {
           if (_isUnlocked && _birthInfo != null)
             GestureDetector(
               onTap: () => setState(() => _birthInfo = null),
-              onLongPress: () async {
+              onLongPress: kDebugMode ? () async {
                 await BirthInfoService.clear();
                 setState(() { _isUnlocked = false; _birthInfo = null; });
-              },
+              } : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: Text('Edit', style: delphiBodyStyle.copyWith(fontSize: 14, color: Colors.white38)),
