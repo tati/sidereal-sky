@@ -46,4 +46,6 @@ Sidereal Sky does not collect or transmit any personal data. Birth details are s
 
 ---
 
+Repo: [github.com/tati/sidereal-sky](https://github.com/tati/sidereal-sky)
+
 Built by [Valkyrie Agency LLC](https://valkyrie.associates)
