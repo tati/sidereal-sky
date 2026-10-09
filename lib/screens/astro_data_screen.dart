@@ -22,9 +22,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   String _currentMoonPhase = "";
   double _siderealLongitude = 0;
   String _sunSign = "";
-  String _sunLonDisplay = "";
   String _sunSiderealDisplay = "";
-  String _moonLonDisplay = "";
   String _moonSiderealDisplay = "";
   String _moonSignName = "";
   bool _hasChart = false;
@@ -75,9 +73,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
         _currentMoonPhase = moonPhase;
         _siderealLongitude = siderealMoonLon;
         _sunSign = sunSign;
-        _sunLonDisplay = '${sunLongitude.toStringAsFixed(4)}°';
         _sunSiderealDisplay = '${siderealSunLon.toStringAsFixed(4)}°';
-        _moonLonDisplay = '${moonLongitude.toStringAsFixed(4)}°';
         _moonSiderealDisplay = '${siderealMoonLon.toStringAsFixed(4)}°';
         _moonSignName = moonSign;
       });
@@ -159,100 +155,6 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
     );
   }
 
-  void _showInfoDialog(BuildContext context) {
-    const entries = [
-      ('Sidereal', 'The zodiac system based on the actual current positions of the constellations in the sky, rather than the seasons. Delphi uses this system.'),
-      ('Sun Longitude', 'The sun\'s raw position in degrees along the ecliptic (the sun\'s apparent path through the sky), measured tropically, before conversion to the sidereal system.'),
-      ('Sun Sidereal', 'The sun\'s position in degrees once the sidereal correction (ayanamsa) has been applied, along with the sign that position falls in.'),
-      ('Moon Longitude', 'The moon\'s raw position in degrees along the ecliptic, measured tropically, before conversion to the sidereal system.'),
-      ('Moon Sidereal', 'The moon\'s position in degrees once the sidereal correction has been applied, along with the sign that position falls in.'),
-      ('Moon Phase', 'The moon\'s current stage in its roughly 29 day cycle, based on how much of it is illuminated by the sun as seen from Earth.'),
-    ];
-
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: const Color(0xFF1A0A2E),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Sidereal Sky', style: delphiLabelStyle),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white54),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'The main screen displays sidereal positions only. Raw tropical longitudes are included below for transparency and educational purposes.',
-                  style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white54),
-                ),
-                const SizedBox(height: 20),
-                // Raw calculation data
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF3D1A52).withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Raw Calculations', style: delphiBodyItalicStyle.copyWith(color: const Color(0xFFDBA54A), fontSize: 15)),
-                      const SizedBox(height: 10),
-                      _rawRow('Sun Longitude', _sunLonDisplay),
-                      _rawRow('Sun Sidereal', '$_sunSiderealDisplay ($_sunSign)'),
-                      _rawRow('Moon Longitude', _moonLonDisplay),
-                      _rawRow('Moon Sidereal', '$_moonSiderealDisplay ($_moonSignName)'),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                // Glossary
-                ...entries.map((e) => Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(e.$1, style: delphiBodyItalicStyle.copyWith(color: const Color(0xFFDBA54A))),
-                      const SizedBox(height: 4),
-                      Text(e.$2, style: delphiBodyStyle.copyWith(fontSize: 14, color: Colors.white70)),
-                    ],
-                  ),
-                )),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _rawRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white54)),
-          Text(value, style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white70)),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

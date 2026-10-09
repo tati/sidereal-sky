@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:purchases_flutter/purchases_flutter.dart';
-import 'package:purchases_ui_flutter/purchases_ui_flutter.dart';
 import '../theme/delphi_text_styles.dart';
 import '../services/birth_info_service.dart';
 import '../services/astro_service.dart';
@@ -145,7 +144,26 @@ class _BirthChartScreenState extends State<BirthChartScreen> {
                 ? const Center(child: CircularProgressIndicator(color: _gold))
                 : !_isUnlocked
                     ? _LockedView(onUnlock: () async {
-                        setState(() => _isUnlocked = true);
+                        try {
+                          final offerings = await Purchases.getOfferings();
+                          final package = offerings.current?.availablePackages.first;
+                          if (package == null) {
+                            setState(() => _isUnlocked = true);
+                            return;
+                          }
+                          final result = await Purchases.purchase(PurchaseParams.package(package));
+                          if (result.customerInfo.entitlements.all[_entitlementId]?.isActive ?? false) {
+                            setState(() => _isUnlocked = true);
+                          }
+                        } on PlatformException catch (e) {
+                          final errorCode = PurchasesErrorHelper.getErrorCode(e);
+                          if (errorCode == PurchasesErrorCode.purchaseCancelledError) return;
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Purchase failed. Please try again.'), backgroundColor: const Color(0xFF3D1A52)),
+                            );
+                          }
+                        }
                       })
                     : _birthInfo == null
                         ? _BirthFormView(onSaved: (info) => setState(() => _birthInfo = info))
@@ -452,43 +470,6 @@ class _BirthFormViewState extends State<_BirthFormView> {
     );
   }
 
-  Widget _textFieldWithInfo({
-    required String label,
-    required TextEditingController controller,
-    required String placeholder,
-    required String info,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(label, style: delphiBodyItalicStyle.copyWith(color: _gold, fontSize: 14)),
-            const SizedBox(width: 4),
-            GestureDetector(
-              onTap: () => _showInfo(info),
-              child: const Icon(Icons.info_outline, color: Colors.white24, size: 16),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          style: delphiBodyStyle.copyWith(fontSize: 15),
-          decoration: InputDecoration(
-            hintText: placeholder,
-            hintStyle: delphiBodyStyle.copyWith(fontSize: 14, color: Colors.white24),
-            filled: true,
-            fillColor: _purple.withOpacity(0.4),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.white12)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: _gold.withOpacity(0.5))),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ],
-    );
-  }
 }
 
 // ── Chart Result ──────────────────────────────────────────────────────────────
@@ -650,24 +631,6 @@ class _BirthChartResultViewState extends State<_BirthChartResultView> {
       'Capricorn': 'Capricorn.png', 'Aquarius': 'Aquarius.png', 'Pisces': 'Pisces.png',
     };
     return base + (signs[sign] ?? 'Aries.png');
-  }
-
-  Widget _signCircle(String label, String sign) {
-    return Column(
-      children: [
-        Text(label, style: delphiUtilityStyle.copyWith(color: Colors.white.withOpacity(0.8))),
-        const SizedBox(height: 8),
-        Container(
-          width: 90,
-          height: 90,
-          decoration: const BoxDecoration(color: Color(0xFF080010), shape: BoxShape.circle),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Image.asset(_signImagePath(sign), color: _gold, colorBlendMode: BlendMode.srcIn),
-          ),
-        ),
-      ],
-    );
   }
 
   @override
