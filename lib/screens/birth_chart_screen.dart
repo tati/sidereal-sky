@@ -2,15 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
 import '../theme/delphi_text_styles.dart';
 import '../services/birth_info_service.dart';
 import '../services/astro_service.dart';
 import '../utils/astro_utils.dart';
 import '../widgets/moon_phase_widget.dart';
-
-const _entitlementId = 'sidereal_pro';
 
 const _background = Color(0xFF1a0a2e);
 const _gold = Color(0xFFDBA54A);
@@ -82,7 +78,6 @@ class BirthChartScreen extends StatefulWidget {
 }
 
 class _BirthChartScreenState extends State<BirthChartScreen> {
-  bool _isUnlocked = false;
   BirthInfo? _birthInfo;
   bool _isLoading = true;
 
@@ -94,19 +89,9 @@ class _BirthChartScreenState extends State<BirthChartScreen> {
 
   Future<void> _init() async {
     final info = await BirthInfoService.load();
-    final cache = await BirthInfoService.loadChart();
-
-    bool unlocked = cache != null; // fast path: cached chart = already paid
-    if (!unlocked) {
-      try {
-        final customerInfo = await Purchases.getCustomerInfo();
-        unlocked = customerInfo.entitlements.active.containsKey(_entitlementId);
-      } catch (_) {}
-    }
-
+    if (!mounted) return;
     setState(() {
       _birthInfo = info;
-      _isUnlocked = unlocked;
       _isLoading = false;
     });
   }
@@ -123,12 +108,12 @@ class _BirthChartScreenState extends State<BirthChartScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          if (_isUnlocked && _birthInfo != null)
+          if (_birthInfo != null)
             GestureDetector(
               onTap: () => setState(() => _birthInfo = null),
               onLongPress: kDebugMode ? () async {
                 await BirthInfoService.clear();
-                setState(() { _isUnlocked = false; _birthInfo = null; });
+                setState(() => _birthInfo = null);
               } : null,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -142,154 +127,9 @@ class _BirthChartScreenState extends State<BirthChartScreen> {
           children: [
             _isLoading
                 ? const Center(child: CircularProgressIndicator(color: _gold))
-                : !_isUnlocked
-                    ? _LockedView(onUnlock: () async {
-                        try {
-                          final offerings = await Purchases.getOfferings();
-                          final package = offerings.current?.availablePackages.first;
-                          if (package == null) {
-                            setState(() => _isUnlocked = true);
-                            return;
-                          }
-                          final result = await Purchases.purchase(PurchaseParams.package(package));
-                          if (result.customerInfo.entitlements.all[_entitlementId]?.isActive ?? false) {
-                            setState(() => _isUnlocked = true);
-                          }
-                        } on PlatformException catch (e) {
-                          final errorCode = PurchasesErrorHelper.getErrorCode(e);
-                          if (errorCode == PurchasesErrorCode.purchaseCancelledError) return;
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Purchase failed. Please try again.'), backgroundColor: const Color(0xFF3D1A52)),
-                            );
-                          }
-                        }
-                      })
-                    : _birthInfo == null
-                        ? _BirthFormView(onSaved: (info) => setState(() => _birthInfo = info))
-                        : _BirthChartResultView(birthInfo: _birthInfo!),
-            Positioned(
-              bottom: 12,
-              left: 0,
-              right: 0,
-              child: Center(child: _privacyLink()),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Locked ────────────────────────────────────────────────────────────────────
-
-class _LockedView extends StatelessWidget {
-  const _LockedView({required this.onUnlock});
-  final Future<void> Function() onUnlock;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(32, 8, 32, 40),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text('Your Birth Chart', style: delphiLabelStyle),
-          const SizedBox(height: 8),
-          Container(height: 2, width: 220, color: const Color(0xFF4A148C)),
-          const SizedBox(height: 28),
-          Text(
-            'Not your "sun sign." Your actual sidereal chart: every planet calculated from the real sky the moment you were born.',
-            style: delphiBodyStyle.copyWith(fontSize: 15, color: Colors.white70),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: _purple.withOpacity(0.4),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _gold.withOpacity(0.2)),
-            ),
-            child: Column(
-              children: [
-                Text('What you get', style: delphiBodyItalicStyle.copyWith(color: _gold, fontSize: 14)),
-                const SizedBox(height: 12),
-                _bulletRow('☀️', 'Sun sign, sidereal not tropical'),
-                _bulletRow('🌙', 'Moon sign + phase at birth'),
-                _bulletRow('💫', 'Mercury, Venus, Mars'),
-                _bulletRow('🪐', 'Jupiter, Saturn, Uranus, Neptune, Pluto'),
-                _bulletRow('📐', 'All positions to the exact degree'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          _glossaryCard('Sidereal', 'The zodiac system based on the actual current positions of the constellations in the sky, rather than the seasons.'),
-_glossaryCard('Moon Phase at Birth', 'The moon\'s stage in its cycle the moment you were born. Shapes emotional rhythm and inner life.'),
-          const SizedBox(height: 36),
-          GestureDetector(
-            onTap: onUnlock,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
-              decoration: BoxDecoration(
-                color: _gold,
-                borderRadius: BorderRadius.circular(32),
-                boxShadow: [BoxShadow(color: _gold.withOpacity(0.35), blurRadius: 24, spreadRadius: 2)],
-              ),
-              child: Text(
-                'Unlock  ·  \$0.99',
-                style: delphiBodyStyle.copyWith(color: _background, fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: () async {
-              try {
-                final info = await Purchases.restorePurchases();
-                if (info.entitlements.active.containsKey(_entitlementId)) {
-                  await onUnlock();
-                }
-              } catch (_) {}
-            },
-            child: Text('Restore Purchase', style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white38)),
-          ),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _bulletRow(String emoji, String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Text(emoji, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white70))),
-        ],
-      ),
-    );
-  }
-
-  Widget _glossaryCard(String term, String definition) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: _purple.withOpacity(0.5),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(term, style: delphiBodyItalicStyle.copyWith(color: _gold, fontSize: 15)),
-            const SizedBox(height: 6),
-            Text(definition, style: delphiBodyStyle.copyWith(fontSize: 14, color: Colors.white70)),
+                : _birthInfo == null
+                    ? _BirthFormView(onSaved: (info) => setState(() => _birthInfo = info))
+                    : _BirthChartResultView(birthInfo: _birthInfo!),
           ],
         ),
       ),
@@ -370,7 +210,7 @@ class _BirthFormViewState extends State<_BirthFormView> {
           Container(height: 2, width: 220, color: const Color(0xFF4A148C)),
           const SizedBox(height: 8),
           Text(
-            'Enter your birth details to calculate your sidereal positions. Sidereal Sky does not store any of your information, it\'s stored only on your device.',
+            'Enter your birth details to calculate your sidereal positions. Your birth details never leave this device; we only ask NASA for planet positions at that moment.',
             style: delphiBodyStyle.copyWith(fontSize: 13, color: Colors.white38),
             textAlign: TextAlign.center,
           ),
@@ -388,7 +228,7 @@ class _BirthFormViewState extends State<_BirthFormView> {
             value: _time?.format(context),
             placeholder: 'Select time',
             onTap: _pickTime,
-            info: 'We need your birth time because the Moon moves fast. Knowing the exact time helps us calculate your Moon position and your rising sign accurately.',
+            info: 'We need your birth time because the Moon moves fast. Knowing the exact time helps us calculate your Moon position accurately.',
           ),
           const SizedBox(height: 48),
           GestureDetector(
@@ -410,6 +250,7 @@ class _BirthFormViewState extends State<_BirthFormView> {
             ),
           ),
           const SizedBox(height: 24),
+          _privacyLink(),
         ],
       ),
     );
@@ -506,6 +347,7 @@ class _BirthChartResultViewState extends State<_BirthChartResultView> {
     // Load from cache first — birth positions never change
     final cached = await BirthInfoService.loadChart();
     if (cached != null) {
+      if (!mounted) return;
       setState(() {
         _sunSign = cached.sunSign;
         _sunSidereal = cached.sunSidereal;
@@ -526,11 +368,13 @@ class _BirthChartResultViewState extends State<_BirthChartResultView> {
     }
 
     try {
-      final dt = widget.birthInfo.dateTime;
+      // Birth time is entered as local wall-clock time. JPL expects UTC, so
+      // convert using this device's time zone rules for that date.
+      final dt = widget.birthInfo.dateTime.toUtc();
       final start = dt.subtract(const Duration(minutes: 1));
       final end = dt.add(const Duration(minutes: 1));
 
-      String fmt(DateTime d) => d.toIso8601String().split('.').first + 'Z';
+      String fmt(DateTime d) => d.toUtc().toIso8601String().split('.').first + 'Z';
       // Fetch Sun and Moon in parallel — show the chart immediately after
       final coreResults = await Future.wait([
         AstroService.fetchAstroData(startDate: fmt(start), endDate: fmt(end), stepSize: '1m', command: '10'),
@@ -550,6 +394,7 @@ class _BirthChartResultViewState extends State<_BirthChartResultView> {
       final elongation = (moonLon - sunLon + 360) % 360;
 
       // Show Sun + Moon immediately, stream planets in one by one
+      if (!mounted) return;
       setState(() {
         _sunSign = getAstrologySign(siderealSun);
         _sunSidereal = '${siderealSun.toStringAsFixed(4)}°';
@@ -605,6 +450,7 @@ class _BirthChartResultViewState extends State<_BirthChartResultView> {
         ));
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = 'Could not calculate chart. Check your connection and try again.';
         _isLoading = false;

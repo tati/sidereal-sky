@@ -1,36 +1,5 @@
 import 'dart:math';
 
-String generateMoonPhaseHtml(String moonPhase) {
-  const moonCss = '''
-    <style>
-      .moon {
-        width: 100px;
-        height: 100px;
-        background-color: #fff;
-        border-radius: 50%;
-        border: 2px solid #000;
-      }
-      .new-moon {
-        background-color: #000;
-      }
-      .full-moon {
-        background-color: #fff;
-      }
-      .waxing-crescent {
-        background: radial-gradient(circle, #000 50%, #fff 50%);
-      }
-      .waning-crescent {
-        background: radial-gradient(circle, #fff 50%, #000 50%);
-      }
-    </style>
-  ''';
-
-  return '''
-    $moonCss
-    <div class="moon $moonPhase"></div>
-  ''';
-}
-
 String getAstrologySign(double longitude) {
   if (longitude >= 0 && longitude < 30) return 'Aries';
   if (longitude >= 30 && longitude < 60) return 'Taurus';

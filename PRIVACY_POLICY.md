@@ -1,6 +1,6 @@
 # Privacy Policy for Sidereal Sky
 
-**Last updated:** August 2, 2026
+**Last updated:** November 26, 2026
 
 Sidereal Sky ("the app," "we," "our") is developed by Valkyrie Agency LLC ("we," "us"). This Privacy Policy explains what information the app accesses, how it is used, and your choices regarding that information.
 
@@ -11,14 +11,14 @@ Sidereal Sky is designed with privacy as a priority. The app does not collect, t
 ## Information We Collect
 
 ### Information You Provide
-If you choose to enter birth information (such as date, time, and location of birth) to generate a natal chart, this information is stored **locally on your device only**. It is not transmitted to us, uploaded to any server we control, or shared with any third party.
+If you choose to enter your birth date and time to generate a birth chart, this information is stored **locally on your device only**. It is not transmitted to us or uploaded to any server we control. To calculate your chart, the app asks NASA JPL for planetary positions at that date and time (see Third-Party Services below); nothing else about you is sent with that request.
 
 ### Information We Do Not Collect
 Sidereal Sky does not use analytics, crash reporting, advertising identifiers, or any third-party tracking tools. We do not know who our users are, how often they use the app, or what data they enter.
 
 ## Third-Party Services
 
-Sidereal Sky retrieves publicly available astronomical data (such as planetary positions) from NASA's Jet Propulsion Laboratory (JPL) Horizons API in order to calculate sidereal planetary and lunar positions shown in the app. These requests contain only the astronomical parameters needed to retrieve ephemeris data (such as dates and celestial body identifiers). They do not include any personal information about you, such as your name, birth data, or device identifiers.
+Sidereal Sky retrieves publicly available astronomical data (such as planetary positions) from NASA's Jet Propulsion Laboratory (JPL) Horizons API in order to calculate sidereal planetary and lunar positions shown in the app. These requests contain only the astronomical parameters needed to retrieve ephemeris data (such as dates and celestial body identifiers). They do not include your name, device identifiers, or any account information. When you generate a birth chart, the date and time you entered is sent as the moment to look up. It is not accompanied by your name, location, or anything else that identifies you.
 
 Use of the NASA JPL API is subject to NASA's own data usage terms. We do not control and are not responsible for NASA's data practices. You can review NASA JPL's policies directly at their website.
 

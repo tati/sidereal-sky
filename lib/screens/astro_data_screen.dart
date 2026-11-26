@@ -10,6 +10,13 @@ import '../theme/delphi_text_styles.dart';
 import 'dart:developer';
 import '../services/models/ephemeris_data.dart';
 import 'birth_chart_screen.dart';
+import 'about_sidereal_screen.dart';
+import '../widgets/sidereal_explainer.dart';
+
+const _background = Color(0xFF1a0a2e);
+const _gold = Color(0xFFDBA54A);
+
+enum _SkyStatus { loading, error, ready }
 
 class AstroDataScreen extends StatefulWidget {
   const AstroDataScreen({super.key});
@@ -18,7 +25,9 @@ class AstroDataScreen extends StatefulWidget {
   State<AstroDataScreen> createState() => _AstroDataScreenState();
 }
 
-class _AstroDataScreenState extends State<AstroDataScreen> {
+class _AstroDataScreenState extends State<AstroDataScreen> with WidgetsBindingObserver {
+  _SkyStatus _status = _SkyStatus.loading;
+  DateTime? _lastFetched;
   String _currentMoonPhase = "";
   double _siderealLongitude = 0;
   String _sunSign = "";
@@ -28,6 +37,7 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   bool _hasChart = false;
 
   Future<void> _fetchData() async {
+    if (mounted) setState(() => _status = _SkyStatus.loading);
     try {
       final DateTime now = DateTime.now().toUtc();
       final DateTime start = now.subtract(const Duration(minutes: 1));
@@ -69,7 +79,10 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
       final String moonSign = getAstrologySign(siderealMoonLon);
       final String sunSign = getAstrologySign(siderealSunLon);
 
+      if (!mounted) return;
       setState(() {
+        _status = _SkyStatus.ready;
+        _lastFetched = DateTime.now();
         _currentMoonPhase = moonPhase;
         _siderealLongitude = siderealMoonLon;
         _sunSign = sunSign;
@@ -79,14 +92,35 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
       });
     } catch (e) {
       log('Error during Fetch: $e');
+      if (mounted) setState(() => _status = _SkyStatus.error);
     }
   }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _fetchData();
     _checkChart();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  // The Moon moves about half a degree an hour, so refresh when the app comes
+  // back to the foreground after a while, or after a failed load.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state != AppLifecycleState.resumed || _status == _SkyStatus.loading) return;
+    final last = _lastFetched;
+    if (_status == _SkyStatus.error ||
+        last == null ||
+        DateTime.now().difference(last) > const Duration(minutes: 30)) {
+      _fetchData();
+    }
   }
 
   Future<void> _checkChart() async {
@@ -159,164 +193,29 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: _background,
       body: SafeArea(
         child: Stack(
           children: [
-            SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height),
-            child: Center(
-              child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                // Sidereal Sky header
-                Column(
-                  children: [
-                    Text(
-                      "Sidereal Sky",
-                      style: delphiLabelStyle.copyWith(
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(color: const Color(0xFFDBA54A).withOpacity(0.7), blurRadius: 18),
-                          Shadow(color: const Color(0xFFDBA54A).withOpacity(0.4), blurRadius: 36),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      height: 2,
-                      width: 220,
-                      color: const Color(0xFF4A148C),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "Your eye on the real sky",
-                      style: delphiBodyItalicStyle.copyWith(fontSize: 13, color: Colors.white38),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Moon phase image circle
-                Container(
-                  width: 260,
-                  height: 260,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF080010),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.15),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFDBA54A).withOpacity(0.55),
-                            blurRadius: 28,
-                            spreadRadius: 6,
-                          ),
-                        ],
-                      ),
-                      child: MoonPhaseWidget(moonPhase: _currentMoonPhase),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-                // Sidereal Longitudes card
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.fromLTRB(32, 38, 32, 28),
-                      margin: const EdgeInsets.only(top: 18),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3D1A52).withOpacity(0.80),
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: _sunSiderealDisplay.isEmpty
-                          ? Text('Loading...', textAlign: TextAlign.center, style: delphiBodyStyle)
-                          : RichText(
-                              textAlign: TextAlign.center,
-                              text: TextSpan(
-                                style: delphiBodyStyle,
-                                children: [
-                                  TextSpan(text: 'Sun: $_sunSiderealDisplay '),
-                                  WidgetSpan(
-                                    alignment: PlaceholderAlignment.middle,
-                                    child: Text(_sunSign, style: const TextStyle(fontFamily: 'Maragsa', fontSize: 18, color: Colors.white)),
-                                  ),
-                                  TextSpan(text: '\nMoon: $_moonSiderealDisplay '),
-                                  WidgetSpan(
-                                    alignment: PlaceholderAlignment.middle,
-                                    child: Text(_moonSignName, style: const TextStyle(fontFamily: 'Maragsa', fontSize: 18, color: Colors.white)),
-                                  ),
-                                  TextSpan(text: '\nMoon Phase: $_currentMoonPhase'),
-                                ],
-                              ),
-                            ),
-                    ),
-                    Positioned(
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.deepPurple[700],
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            DateFormat('MMMM d, y').format(DateTime.now()),
-                            style: delphiHeaderStyle.copyWith(fontSize: 16),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Sun and Moon sign glyphs (Image assets, not text)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _signCircle("☀️ Sun", _sunSign.isEmpty ? "Aries" : _sunSign),
-                    _signCircle("🌙 Moon", getAstrologySign(_siderealLongitude)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-          ),
-            ),
-            Positioned(
-              bottom: 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: GestureDetector(
-                  onTap: () => launchUrl(Uri.parse('https://www.delphicollective.org/sidereal-sky')),
-                  child: const Text(
-                    'Privacy Policy',
-                    style: TextStyle(
-                      fontFamily: 'LibreBaskerville',
-                      fontSize: 12,
-                      color: Colors.white24,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.white24,
+            RefreshIndicator(
+              color: _gold,
+              backgroundColor: _background,
+              onRefresh: _fetchData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 56, 16, 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _header(),
+                        const SizedBox(height: 24),
+                        if (_status == _SkyStatus.error) _offlineView() else _skyView(),
+                        const SizedBox(height: 32),
+                        _privacyLink(),
+                      ],
                     ),
                   ),
                 ),
@@ -325,31 +224,256 @@ class _AstroDataScreenState extends State<AstroDataScreen> {
             Positioned(
               top: 12,
               right: 12,
-              child: Material(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(20),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(20),
-                  onTap: () async {
-                    await Navigator.push(context, MaterialPageRoute(builder: (_) => const BirthChartScreen()));
-                    _checkChart();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              child: _chartButton(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _header() {
+    return Column(
+      children: [
+        Text(
+          "Sidereal Sky",
+          style: delphiLabelStyle.copyWith(
+            color: Colors.white,
+            shadows: [
+              Shadow(color: _gold.withOpacity(0.7), blurRadius: 18),
+              Shadow(color: _gold.withOpacity(0.4), blurRadius: 36),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(height: 2, width: 220, color: const Color(0xFF4A148C)),
+        const SizedBox(height: 8),
+        Text(
+          "Your eye on the real sky",
+          style: delphiBodyItalicStyle.copyWith(fontSize: 13, color: Colors.white38),
+        ),
+      ],
+    );
+  }
+
+  Widget _skyView() {
+    final bool ready = _status == _SkyStatus.ready;
+    return Column(
+      children: [
+        // Moon phase image circle
+        Container(
+          width: 260,
+          height: 260,
+          decoration: BoxDecoration(
+            color: const Color(0xFF080010),
+            shape: BoxShape.circle,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 16, offset: const Offset(0, 8))],
+          ),
+          child: Center(
+            child: ready
+                ? Container(
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFDBA54A).withOpacity(0.12),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: const Color(0xFFDBA54A).withOpacity(0.5), width: 1),
+                      shape: BoxShape.circle,
+                      boxShadow: [BoxShadow(color: _gold.withOpacity(0.55), blurRadius: 28, spreadRadius: 6)],
                     ),
-                    child: Text(
-                      _hasChart ? '✦ My Chart' : '✦ Chart',
-                      style: delphiBodyStyle.copyWith(fontSize: 13, color: const Color(0xFFDBA54A), height: 1.0),
+                    child: MoonPhaseWidget(moonPhase: _currentMoonPhase),
+                  )
+                : const SizedBox(width: 32, height: 32, child: CircularProgressIndicator(color: _gold, strokeWidth: 2)),
+          ),
+        ),
+        const SizedBox(height: 40),
+        // Sidereal Longitudes card
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(32, 38, 32, 28),
+              margin: const EdgeInsets.only(top: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFF3D1A52).withOpacity(0.80),
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: !ready
+                  ? Text('Reading the sky...', textAlign: TextAlign.center, style: delphiBodyStyle)
+                  : RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: delphiBodyStyle,
+                        children: [
+                          TextSpan(text: 'Sun: $_sunSiderealDisplay '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Text(_sunSign, style: const TextStyle(fontFamily: 'Maragsa', fontSize: 18, color: Colors.white)),
+                          ),
+                          TextSpan(text: '\nMoon: $_moonSiderealDisplay '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: Text(_moonSignName, style: const TextStyle(fontFamily: 'Maragsa', fontSize: 18, color: Colors.white)),
+                          ),
+                          TextSpan(text: '\nMoon Phase: $_currentMoonPhase'),
+                        ],
+                      ),
                     ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.deepPurple[700],
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    DateFormat('MMMM d, y').format(DateTime.now()),
+                    style: delphiHeaderStyle.copyWith(fontSize: 16),
                   ),
                 ),
               ),
             ),
           ],
+        ),
+        if (ready) ...[
+          const SizedBox(height: 24),
+          // Sun and Moon sign glyphs (Image assets, not text)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _signCircle("☀️ Sun", _sunSign),
+              _signCircle("🌙 Moon", getAstrologySign(_siderealLongitude)),
+            ],
+          ),
+        ],
+        const SizedBox(height: 28),
+        _textButton('What is sidereal?', () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const AboutSiderealScreen()));
+        }),
+      ],
+    );
+  }
+
+  /// Shown when NASA JPL can't be reached: a clear way to retry, plus something
+  /// worth reading in the meantime.
+  Widget _offlineView() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF3D1A52).withOpacity(0.80),
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(width: 72, height: 72, child: MoonPhaseWidget(moonPhase: 'New Moon')),
+                const SizedBox(height: 16),
+                Text('The sky is out of reach', style: delphiBodyItalicStyle.copyWith(color: _gold, fontSize: 18), textAlign: TextAlign.center),
+                const SizedBox(height: 10),
+                Text(
+                  'We couldn\'t reach NASA for today\'s planetary positions. '
+                  'Check your connection, then try again.',
+                  style: delphiBodyStyle.copyWith(fontSize: 14, color: Colors.white70, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                _reloadButton(),
+              ],
+            ),
+          ),
+          const SizedBox(height: 36),
+          Text('While you wait: what is sidereal astrology?', style: delphiBodyItalicStyle.copyWith(fontSize: 18), textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Center(child: Container(height: 2, width: 180, color: const Color(0xFF4A148C))),
+          const SizedBox(height: 24),
+          const SiderealExplainer(),
+          const SizedBox(height: 28),
+          Center(child: _reloadButton()),
+        ],
+      ),
+    );
+  }
+
+  Widget _reloadButton() {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(32),
+        boxShadow: [BoxShadow(color: _gold.withOpacity(0.35), blurRadius: 24, spreadRadius: 2)],
+      ),
+      child: Material(
+        color: _gold,
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: _fetchData,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+            child: Text('Reload the sky', style: delphiBodyStyle.copyWith(color: _background, fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _textButton(String label, VoidCallback onTap) {
+    return TextButton(
+      onPressed: onTap,
+      child: Text(
+        label,
+        style: delphiBodyItalicStyle.copyWith(
+          fontSize: 14,
+          color: _gold,
+          decoration: TextDecoration.underline,
+          decorationColor: _gold.withOpacity(0.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _privacyLink() {
+    return GestureDetector(
+      onTap: () => launchUrl(Uri.parse('https://www.delphicollective.org/sidereal-sky')),
+      child: const Text(
+        'Privacy Policy',
+        style: TextStyle(
+          fontFamily: 'LibreBaskerville',
+          fontSize: 12,
+          color: Colors.white24,
+          decoration: TextDecoration.underline,
+          decorationColor: Colors.white24,
+        ),
+      ),
+    );
+  }
+
+  Widget _chartButton() {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () async {
+          await Navigator.push(context, MaterialPageRoute(builder: (_) => const BirthChartScreen()));
+          _checkChart();
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          decoration: BoxDecoration(
+            // Solid so scrolling text doesn't show through the floating button.
+            color: Color.alphaBlend(_gold.withOpacity(0.12), _background),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: _gold.withOpacity(0.5), width: 1),
+          ),
+          child: Text(
+            _hasChart ? '✦ My Chart' : '✦ Chart',
+            style: delphiBodyStyle.copyWith(fontSize: 13, color: _gold, height: 1.0),
+          ),
         ),
       ),
     );
