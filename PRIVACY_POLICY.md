@@ -46,4 +46,4 @@ We may update this Privacy Policy from time to time. Material changes will be re
 
 If you have questions about this Privacy Policy, please contact us at:
 
-[your contact email]
+tatiana@valkyrie.associates

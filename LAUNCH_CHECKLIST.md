@@ -64,7 +64,8 @@ Legend: ✅ done · ⬜ to do · 👩 You (needs your Mac, accounts, or a decisi
 
 ## Decisions / info needed from you (👩)
 
-- ⬜ **Contact email** for the privacy policy (currently `[your contact email]`)
+- ✅ **Contact email** for the privacy policy: tatiana@valkyrie.associates
+- ⬜ Optional: a brand forwarding address (e.g. hello@delphicollective.org) to replace it later
 - ⬜ **Real app icon.** The current one is a provisional stand-in. Requirements: 1024 × 1024 PNG, **no transparency** (Apple adds the rounded corners), no text that's too small to read. Z will slice it into every size.
 - ⬜ Developer / company name shown on the App Store: Valkyrie Agency LLC vs Delphi Collective?
 
@@ -79,4 +80,4 @@ Legend: ✅ done · ⬜ to do · 👩 You (needs your Mac, accounts, or a decisi
 
 - $0.99/month subscription via RevenueCat (start from `archive/revenuecat-paywall`)
 - Rising sign (`calculateRisingSign` already exists in `astro_utils.dart`; needs birth location)
-- Daily notification for Moon sign changes
+- Notifications for sky events: eclipses, sidereal sign seasons, and more (ideas collected in [`SKY_EVENTS.md`](SKY_EVENTS.md))
