@@ -1,26 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:purchases_flutter/purchases_flutter.dart';
-import 'dart:io';
 import 'screens/astro_data_screen.dart';
 
 const Color delphiBackground = Color(0xFF1a0a2e);
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await _initializeRevenueCat();
+void main() {
   runApp(const AstroDataApp());
-}
-
-Future<void> _initializeRevenueCat() async {
-  String apiKey;
-  if (Platform.isIOS || Platform.isMacOS) {
-    apiKey = 'test_qxenxWfhlJaigznDWMvCMyDjymO';
-  } else if (Platform.isAndroid) {
-    apiKey = 'test_qxenxWfhlJaigznDWMvCMyDjymO';
-  } else {
-    throw UnsupportedError('Platform not supported');
-  }
-  await Purchases.configure(PurchasesConfiguration(apiKey));
 }
 
 class AstroDataApp extends StatelessWidget {
@@ -33,27 +17,9 @@ class AstroDataApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.transparent,
+        scaffoldBackgroundColor: delphiBackground,
       ),
-      home: const AstroDataScreenWithOverlay(),
-    );
-  }
-}
-
-class AstroDataScreenWithOverlay extends StatelessWidget {
-  const AstroDataScreenWithOverlay({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent, // Make scaffold background transparent
-      body: Stack(
-        children: [
-          Container(color: delphiBackground),
-          const AstroDataScreen(), // Your main app content
-          // Positioned widget to place your logo at the bottom right
-        ],
-      ),
+      home: const AstroDataScreen(),
     );
   }
 }

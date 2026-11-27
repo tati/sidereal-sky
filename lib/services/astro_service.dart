@@ -7,6 +7,9 @@ import 'models/ephemeris_data.dart';
 class AstroService {
   static const String _baseUrl = 'https://ssd.jpl.nasa.gov/api/horizons.api';
 
+  /// How long to wait for NASA JPL before giving up and showing the offline view.
+  static const Duration requestTimeout = Duration(seconds: 15);
+
   static Future<String> fetchAstroData({
     required String startDate,
     required String endDate,
@@ -29,7 +32,7 @@ class AstroService {
       );
 
       dev.log('Request URL: $requestUrl');
-      final http.Response response = await http.get(requestUrl);
+      final http.Response response = await http.get(requestUrl).timeout(requestTimeout);
       dev.log('response.statusCode: ${response.statusCode}');
       dev.log("✅ Astro data has been fetched");
 
@@ -40,14 +43,18 @@ class AstroService {
       }
     } catch (e) {
       dev.log('HTTP Request Error: $e');
-      return '{"error":"$e"}';
+      return jsonEncode({'error': e.toString()});
     }
   }
 
   static List<EphemerisData> parseAstroData(String response) {
     try {
       final Map<String, dynamic> jsonResponse = jsonDecode(response);
-      final String result = jsonResponse['result'];
+      final Object? result = jsonResponse['result'];
+      if (result is! String) {
+        dev.log("❌ No 'result' field in response: ${jsonResponse['error'] ?? response}");
+        return [];
+      }
       final List<String> lines = LineSplitter.split(result).toList();
 
       final int soeIndex = lines.indexWhere((line) => line.contains(r'$$SOE'));

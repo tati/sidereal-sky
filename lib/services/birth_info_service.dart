@@ -25,7 +25,7 @@ class ChartCache {
 class BirthInfoService {
   static const _keyDateTime = 'birth_datetime';
   static const _keyLocation = 'birth_location';
-  static const _keyChartCache = 'birth_chart_cache';
+  static const _keyChartCache = 'birth_chart_cache_v2'; // v2: birth time now converted to UTC
 
   static Future<void> save(BirthInfo info) async {
     final prefs = await SharedPreferences.getInstance();
