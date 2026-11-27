@@ -31,10 +31,12 @@ Legend: ✅ done · ⬜ to do · 👩 You (needs your Mac, accounts, or a decisi
 
 ## Phase 2: On your Mac → your iPhone (👩)
 
-- ⬜ `git pull`, then `flutter pub get`
-- ⬜ `cd ios && pod install`. This updates `Podfile.lock` to drop RevenueCat; commit the change.
+- ✅ `git pull`, then `flutter pub get` (local folder renamed to `sidereal-sky`)
+- ✅ `cd ios && pod install`. RevenueCat pods are gone; Flutter also migrated the iOS project to Swift Package Manager and UIScene (committed).
+- ✅ Ran in the iOS Simulator (iPhone 16 Plus): daily sky and birth chart both work with live NASA data
+- ✅ Git author set to `tati` so commits link to GitHub
 - ⬜ Open `ios/Runner.xcworkspace` in Xcode → Runner → Signing & Capabilities → confirm Team and "Automatically manage signing"
-- ⬜ **Quick test:** plug in your iPhone (Developer Mode on) → `flutter run --release`
+- ⬜ **Quick test (next step):** plug in your iPhone (Developer Mode on) → `flutter run --release`
 - ⬜ **Real test:** archive → upload to App Store Connect → install with TestFlight (see Phase 3 for the app record)
 - ⬜ Live with it for about a week. Things to try:
   - ⬜ Normal open: Sun, Moon, and phase load
@@ -68,6 +70,10 @@ Legend: ✅ done · ⬜ to do · 👩 You (needs your Mac, accounts, or a decisi
 - ⬜ Optional: a brand forwarding address (e.g. hello@delphicollective.org) to replace it later
 - ⬜ **Real app icon.** The current one is a provisional stand-in. Requirements: 1024 × 1024 PNG, **no transparency** (Apple adds the rounded corners), no text that's too small to read. Z will slice it into every size.
 - ⬜ Developer / company name shown on the App Store: Valkyrie Agency LLC vs Delphi Collective?
+
+## Later cleanup
+
+- ⬜ CocoaPods "base configuration" warning for Profile builds (harmless; could finish the move to Swift Package Manager with `pod deintegrate`)
 
 ## Known limitations (fine for V1, revisit later)
 
